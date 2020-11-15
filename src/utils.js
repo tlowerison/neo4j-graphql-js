@@ -954,14 +954,11 @@ export const removeIgnoredFields = (schemaType, selections) => {
 };
 
 export const getInterfaceDerivedTypeNames = (schema, interfaceName) => {
-  const implementingTypeMap = schema._implementations
-    ? schema._implementations[interfaceName]
+  const implementingTypeMap = schema._implementationsMap
+    ? schema._implementationsMap[interfaceName] || {}
     : {};
-  let implementingTypes = [];
-  if (implementingTypeMap) {
-    implementingTypes = Object.values(implementingTypeMap).map(
-      type => type.name
-    );
-  }
-  return implementingTypes.sort();
+  return [
+    ...(implementingTypeMap.objects || []),
+    ...(implementingTypeMap.interfaces || [])
+  ].sort();
 };

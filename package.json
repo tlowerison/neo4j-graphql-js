@@ -52,7 +52,6 @@
     "apollo-client": "^2.6.10",
     "apollo-link-http": "^1.5.16",
     "apollo-server": "~2.16.0",
-    "apollo-server-express": "^2.16.0",
     "ava": "^2.2.0",
     "body-parser": "^1.18.3",
     "express": "^4.17.1",
@@ -70,11 +69,14 @@
     "@babel/runtime": "^7.5.5",
     "@babel/runtime-corejs2": "^7.5.5",
     "apollo-server-errors": "^2.4.1",
+    "apollo-server-express": "^2.19.0",
+    "apollo-server-plugin-base": "^0.10.2",
     "debug": "^4.1.1",
-    "graphql": "^14.2.1",
+    "graphql": "^15.3.0",
     "graphql-auth-directives": "^2.2.1",
     "lodash": "^4.17.19",
-    "neo4j-driver": "^4.1.0"
+    "neo4j-driver": "^4.1.0",
+    "ramda": "^0.27.1"
   },
   "ava": {
     "require": [

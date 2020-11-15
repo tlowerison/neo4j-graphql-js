@@ -39,6 +39,7 @@ import {
   isNeo4jIDField
 } from './augment/fields';
 import { selectUnselectedOrderedFields } from './augment/input-values';
+import { getAuthzPredicates } from './dynamic-auth';
 
 export function buildCypherSelection({
   initial = '',
@@ -271,7 +272,8 @@ export function buildCypherSelection({
         parentSelectionInfo,
         secondParentSelectionInfo,
         isFederatedOperation,
-        context
+        context,
+        innerSchemaType
       });
     } else if (isObjectType || isInterfaceType) {
       const schemaTypeRelation = getRelationTypeDirective(schemaTypeAstNode);
@@ -405,11 +407,16 @@ export function buildCypherSelection({
           fieldType,
           schemaType,
           schemaTypeRelation,
-          parentSelectionInfo
+          parentSelectionInfo,
+          context,
+          cypherParams,
+          innerSchemaType,
+          resolveInfo
         });
       } else if (isRelationshipField || isUnionTypeField) {
         // Object type field with relation directive
         [translationConfig, subSelection] = relationFieldOnNodeType({
+          context,
           initial,
           fieldName,
           fieldType,
@@ -418,6 +425,7 @@ export function buildCypherSelection({
           relDirection,
           relType,
           nestedVariable,
+          schemaType,
           schemaTypeFields,
           derivedTypeMap,
           isInterfaceTypeField,
@@ -470,7 +478,8 @@ export function buildCypherSelection({
           fieldArgs,
           cypherParams,
           parentSelectionInfo,
-          secondParentSelectionInfo
+          secondParentSelectionInfo,
+          context
         });
       } else if (isRelationshipTypeField) {
         // Relation type field on node type (field payload types...)
@@ -496,7 +505,8 @@ export function buildCypherSelection({
           selectionFilters,
           paramIndex,
           fieldArgs,
-          cypherParams
+          cypherParams,
+          context
         });
       }
     }
@@ -523,15 +533,27 @@ const translateScalarTypeField = ({
   parentSelectionInfo,
   secondParentSelectionInfo,
   isFederatedOperation,
-  context
+  context,
+  innerSchemaType
 }) => {
+  const { shield } = getAuthzPredicates({
+    context,
+    cypherParams,
+    fieldName,
+    innerSchemaType,
+    resolveInfo,
+    schemaType,
+    variableName
+  });
   if (isNeo4jIDField({ name: fieldName })) {
     const innerSchemaTypeRelation = parentSelectionInfo.innerSchemaTypeRelation;
     const isRelationshipTypeField = innerSchemaTypeRelation !== undefined;
     return {
-      initial: `${initial}${fieldName}: ID(${safeVar(
-        isRelationshipTypeField ? `${variableName}_relation` : variableName
-      )})${commaIfTail}`,
+      initial: `${initial}${fieldName}: ${shield(
+        `ID(${safeVar(
+          isRelationshipTypeField ? `${variableName}_relation` : variableName
+        )})`
+      )}${commaIfTail}`,
       ...tailParams
     };
   } else {
@@ -540,16 +562,18 @@ const translateScalarTypeField = ({
         variableName = `${variableName}_relation`;
       }
       return {
-        initial: `${initial}${fieldName}: apoc.cypher.runFirstColumn("${customCypherStatement}", {${cypherDirectiveArgs(
-          variableName,
-          headSelection,
-          cypherParams,
-          schemaType,
-          resolveInfo,
-          paramIndex,
-          isFederatedOperation,
-          context
-        )}}, false)${commaIfTail}`,
+        initial: `${initial}${fieldName}: ${shield(
+          `apoc.cypher.runFirstColumn("${customCypherStatement}", {${cypherDirectiveArgs(
+            variableName,
+            headSelection,
+            cypherParams,
+            schemaType,
+            resolveInfo,
+            paramIndex,
+            isFederatedOperation,
+            context
+          )}}, false)`
+        )}${commaIfTail}`,
         ...tailParams
       };
     } else if (
@@ -563,12 +587,19 @@ const translateScalarTypeField = ({
         commaIfTail,
         tailParams,
         parentSelectionInfo,
-        secondParentSelectionInfo
+        secondParentSelectionInfo,
+        context,
+        cypherParams,
+        innerSchemaType,
+        resolveInfo,
+        schemaType
       });
     }
     // graphql scalar type, no custom cypher statement
     return {
-      initial: `${initial} .${fieldName} ${commaIfTail}`,
+      initial: `${initial} ${fieldName}: ${shield(
+        `${variableName}.${fieldName}`
+      )} ${commaIfTail}`,
       ...tailParams
     };
   }

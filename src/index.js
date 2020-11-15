@@ -25,6 +25,22 @@ import { buildDocument } from './augment/ast';
 import { augmentDirectiveDefinitions } from './augment/directives';
 import { isFederatedOperation, executeFederatedOperation } from './federation';
 import { schemaAssert } from './schemaAssert';
+import {
+  AuthenticationDirective,
+  authorizations,
+  makeAuthorizationDirective
+} from './dynamic-auth';
+import {
+  fromPairs,
+  has,
+  identity,
+  keys,
+  mapObjIndexed,
+  omit,
+  toPairs
+} from 'ramda';
+
+export * from './dynamic-auth';
 
 const neo4jGraphQLVersion = require('../package.json').version;
 
@@ -34,9 +50,10 @@ export async function neo4jgraphql(
   object,
   params,
   context,
-  resolveInfo,
-  debugFlag
+  resolveInfo
+  // debugFlag,
 ) {
+  const debugFlag = true;
   if (isFederatedOperation({ resolveInfo })) {
     return await executeFederatedOperation({
       object,
@@ -252,39 +269,6 @@ export const augmentSchema = (schema, config) => {
   return augmentedSchema(schema, config);
 };
 
-export const makeAugmentedSchema = ({
-  schema,
-  typeDefs,
-  resolvers = {},
-  logger,
-  allowUndefinedInResolve = false,
-  resolverValidationOptions = {},
-  directiveResolvers = null,
-  schemaDirectives = {},
-  schemaTransforms = [],
-  parseOptions = {},
-  inheritResolversFromInterfaces = false,
-  config
-}) => {
-  if (schema) {
-    return augmentedSchema(schema, config);
-  }
-  if (!typeDefs) throw new Error('Must provide typeDefs');
-  return makeAugmentedExecutableSchema({
-    typeDefs,
-    resolvers,
-    logger,
-    allowUndefinedInResolve,
-    resolverValidationOptions,
-    directiveResolvers,
-    schemaDirectives,
-    schemaTransforms,
-    parseOptions,
-    inheritResolversFromInterfaces,
-    config
-  });
-};
-
 /**
  * Infer a GraphQL schema by inspecting the contents of a Neo4j instance.
  * @param {} driver
@@ -337,4 +321,141 @@ export const assertSchema = ({
   return executeQuery(driver).catch(error => {
     console.error(error);
   });
+};
+
+const makeBasicAugmentedSchema = ({
+  schema,
+  typeDefs,
+  resolvers = {},
+  logger,
+  allowUndefinedInResolve = false,
+  resolverValidationOptions = {},
+  directiveResolvers = null,
+  schemaDirectives = {},
+  schemaTransforms = [],
+  parseOptions = {},
+  inheritResolversFromInterfaces = false,
+  config
+}) => {
+  if (schema) {
+    return augmentedSchema(schema, config);
+  }
+  if (!typeDefs) throw new Error('Must provide typeDefs');
+  return makeAugmentedExecutableSchema({
+    typeDefs,
+    resolvers,
+    logger,
+    allowUndefinedInResolve,
+    resolverValidationOptions,
+    directiveResolvers,
+    schemaDirectives,
+    schemaTransforms,
+    parseOptions,
+    inheritResolversFromInterfaces,
+    config
+  });
+};
+
+export const makeAugmentedSchema = augmentedConfig => {
+  const { authn = true, authz = true } = augmentedConfig?.config?.auth || {};
+  const config = {
+    ...augmentedConfig,
+    ...(augmentedConfig.config
+      ? { config: omit(['auth'], augmentedConfig.config) }
+      : {})
+  };
+  const typeDefs = `
+    ${
+      authn
+        ? 'directive @authn(requires: [Role]) on INTERFACE | OBJECT | FIELD_DEFINITION'
+        : ''
+    }
+    ${
+      authz
+        ? 'directive @authz(requires: String) on INTERFACE | OBJECT | FIELD_DEFINITION'
+        : ''
+    }
+    ${
+      typeof authz === 'object'
+        ? toPairs(authz)
+            .map(
+              ([name]) =>
+                `directive @${name} on INTERFACE | OBJECT | FIELD_DEFINITION`
+            )
+            .join('\n')
+        : ''
+    }
+    ${config.typeDefs}
+  `;
+  const Query = { ...(config.resolvers?.Query || {}) };
+  const Mutation = { ...(config.resolvers?.Mutation || {}) };
+  const tempSchema = makeBasicAugmentedSchema({
+    ...config,
+    schemaDirectives: makeSchemaDirectives(config, authz, authorizations),
+    typeDefs
+  });
+  const resolvers = {
+    ...config.resolvers,
+    Query: {
+      ...(config?.config?.query === false
+        ? fromPairs(
+            keys(tempSchema.getQueryType()?.getFields() || {})
+              .filter(key => !has(key, Query))
+              .map(key => [key, neo4jgraphql])
+          )
+        : config.resolvers?.Query),
+      ...Query
+    },
+    Mutation: {
+      ...(config?.config?.mutation === false
+        ? fromPairs(
+            keys(tempSchema.getMutationType()?.getFields() || {})
+              .filter(key => !has(key, Mutation))
+              .map(key => [key, neo4jgraphql])
+          )
+        : config.resolvers?.Mutation),
+      ...Mutation
+    }
+  };
+  return makeBasicAugmentedSchema({
+    ...config,
+    resolvers,
+    schemaDirectives: makeSchemaDirectives(config, authz),
+    typeDefs
+  });
+};
+
+const makeSchemaDirectives = (config, authz, authorizations = {}) => ({
+  ...(config.schemaDirectives || {}),
+  ...mapObjIndexed(
+    (requires, name) =>
+      makeAuthorizationDirective(name, authorizations, requires),
+    typeof authz === 'object' ? authz : {}
+  ),
+  authn: AuthenticationDirective,
+  authz: makeAuthorizationDirective('authz', authorizations)
+});
+
+export const wrapNeo4jgraphql = fn => async (
+  parent,
+  params,
+  context,
+  resolveInfo
+) => {
+  const {
+    debugFlag = false,
+    context: newContext = context,
+    params: newParams = params,
+    parent: newParent = parent,
+    resolveInfo: newResolveInfo = resolveInfo,
+    toResult = identity
+  } = await fn({ parent, params, context, resolveInfo });
+  const res = await neo4jgraphql(
+    newParent,
+    newParams,
+    newContext,
+    newResolveInfo,
+    debugFlag
+  );
+  return toResult(res);
 };
