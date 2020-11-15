@@ -356,14 +356,47 @@ const makeBasicAugmentedSchema = ({
   });
 };
 
-export const makeAugmentedSchema = augmentedConfig => {
-  const { authn = true, authz = true } = augmentedConfig?.config?.auth || {};
-  const config = {
-    ...augmentedConfig,
-    ...(augmentedConfig.config
-      ? { config: omit(['auth'], augmentedConfig.config) }
-      : {})
-  };
+export const makeAugmentedSchema = config => {
+  const authn = fromPairs(
+    config.typeDefs
+      .match(
+        new RegExp(
+          '#( )+@([A-z]+)( )+:=( )+@authn\\(requires:( )*\\[([A-z]+,)*( )*([A-z]+)\\]\\)',
+          'g'
+        )
+      )
+      ?.map(definition => {
+        let [name] = definition.match(new RegExp('(?<=@)([A-z]+)'));
+        let [roles] = definition.match(
+          new RegExp('(?<=requires:)( )*\\[([A-z]+,)*( )*([A-z]+)\\]')
+        );
+        roles = roles.trim();
+        return [
+          name,
+          roles
+            .slice(1, roles.length - 1)
+            .split(',')
+            .map(role => role.trim())
+        ];
+      }) || {}
+  );
+  const authz = fromPairs(
+    config.typeDefs
+      .match(
+        new RegExp(
+          '#( )+@([A-z]+)( )+:=( )+@authz\\(requires:( )*(\'.*\'|".*"|`.*`)\\)',
+          'g'
+        )
+      )
+      ?.map(definition => {
+        let [name] = definition.match(new RegExp('(?<=@)([A-z]+)'));
+        let [requires] = definition.match(
+          new RegExp('(?<=requires:)( )*(\'.*\'|".*"|`.*`)')
+        );
+        requires = requires.trim();
+        return [name, requires.slice(1, requires.length - 1)];
+      }) || {}
+  );
   const typeDefs = `
     ${
       authn
