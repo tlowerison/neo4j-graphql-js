@@ -10,6 +10,7 @@ import { typeIdentifiers } from '../utils';
 
 const toAuthorization = requires => variableName =>
   `(${requires.replace(new RegExp('this', 'g'), variableName)})`;
+
 const saveNodeAuthorization = ({ authorizations, requires, typeName }) => {
   if (!has(typeName, authorizations)) {
     authorizations[typeName] = {
@@ -20,17 +21,22 @@ const saveNodeAuthorization = ({ authorizations, requires, typeName }) => {
   authorizations[typeName].node.push(toAuthorization(requires));
 };
 
-export const makeAuthorizationDirective = (name, authorizations, requires) =>
+export const makeAuthorizationDirective = (
+  authorizations,
+  name = 'authz',
+  requires
+) =>
   class AuthorizationDirective extends SchemaDirectiveVisitor {
     static getDirectiveDeclaration() {
       return new GraphQLDirective({
         name,
-        locations: [DirectiveLocation.FIELD_DEFINITION],
+        locations: [
+          DirectiveLocation.FIELD_DEFINITION,
+          DirectiveLocation.INTERFACE,
+          DirectiveLocation.OBJECT,
+          DirectiveLocation.UNION
+        ],
         args: {
-          fields: {
-            type: new GraphQLList(GraphQLString),
-            defaultValue: []
-          },
           requires: {
             type: GraphQLString,
             defaultValue: 'FALSE'

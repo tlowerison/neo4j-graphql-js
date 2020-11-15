@@ -26,8 +26,8 @@ import { augmentDirectiveDefinitions } from './augment/directives';
 import { isFederatedOperation, executeFederatedOperation } from './federation';
 import { schemaAssert } from './schemaAssert';
 import {
-  AuthenticationDirective,
   authorizations,
+  makeAuthenticationDirective,
   makeAuthorizationDirective
 } from './dynamic-auth';
 import {
@@ -367,12 +367,22 @@ export const makeAugmentedSchema = augmentedConfig => {
   const typeDefs = `
     ${
       authn
-        ? 'directive @authn(requires: [Role]) on INTERFACE | OBJECT | FIELD_DEFINITION'
+        ? 'directive @authn(requires: [Role]) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION'
         : ''
     }
     ${
       authz
-        ? 'directive @authz(requires: String) on INTERFACE | OBJECT | FIELD_DEFINITION'
+        ? 'directive @authz(requires: String) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION'
+        : ''
+    }
+    ${
+      typeof authn === 'object'
+        ? toPairs(authn)
+            .map(
+              ([name]) =>
+                `directive @${name} on FIELD_DEFINITION | INTERFACE | OBJECT | UNION`
+            )
+            .join('\n')
         : ''
     }
     ${
@@ -380,7 +390,7 @@ export const makeAugmentedSchema = augmentedConfig => {
         ? toPairs(authz)
             .map(
               ([name]) =>
-                `directive @${name} on INTERFACE | OBJECT | FIELD_DEFINITION`
+                `directive @${name} on FIELD_DEFINITION | INTERFACE | OBJECT | UNION`
             )
             .join('\n')
         : ''
@@ -391,7 +401,12 @@ export const makeAugmentedSchema = augmentedConfig => {
   const Mutation = { ...(config.resolvers?.Mutation || {}) };
   const tempSchema = makeBasicAugmentedSchema({
     ...config,
-    schemaDirectives: makeSchemaDirectives(config, authz, authorizations),
+    schemaDirectives: makeSchemaDirectives(
+      config.schemaDirectives,
+      authn,
+      authz,
+      authorizations
+    ),
     typeDefs
   });
   const resolvers = {
@@ -420,20 +435,33 @@ export const makeAugmentedSchema = augmentedConfig => {
   return makeBasicAugmentedSchema({
     ...config,
     resolvers,
-    schemaDirectives: makeSchemaDirectives(config, authz),
+    schemaDirectives: makeSchemaDirectives(
+      config.schemaDirectives,
+      authn,
+      authz
+    ),
     typeDefs
   });
 };
 
-const makeSchemaDirectives = (config, authz, authorizations = {}) => ({
-  ...(config.schemaDirectives || {}),
+const makeSchemaDirectives = (
+  schemaDirectives = {},
+  authn,
+  authz,
+  authorizations = {}
+) => ({
+  ...schemaDirectives,
+  ...mapObjIndexed(
+    (requires, name) => makeAuthenticationDirective(name, requires),
+    typeof authn === 'object' ? authn : {}
+  ),
   ...mapObjIndexed(
     (requires, name) =>
-      makeAuthorizationDirective(name, authorizations, requires),
+      makeAuthorizationDirective(authorizations, name, requires),
     typeof authz === 'object' ? authz : {}
   ),
-  authn: AuthenticationDirective,
-  authz: makeAuthorizationDirective('authz', authorizations)
+  authn: makeAuthenticationDirective(),
+  authz: makeAuthorizationDirective(authorizations)
 });
 
 export const wrapNeo4jgraphql = fn => async (

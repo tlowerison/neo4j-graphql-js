@@ -2,38 +2,36 @@ import { flatten, has, identity } from 'ramda';
 import { getAdditionalLabels } from '../utils';
 import { isListType } from 'graphql';
 
-const getAuthzFieldPredicate = ({
-  authorizations,
-  fieldName,
-  schemaType,
-  typeNames,
-  variableName
-}) => {
-  const fieldAuthorizations = flatten(
-    typeNames.map(typeName => {
-      const { fields } = authorizations[typeName];
-      return has(fieldName, fields) && has(schemaType, fields[fieldName])
-        ? fields[fieldName][schemaType] || []
-        : [];
-    })
-  );
-  return fieldAuthorizations.length > 0
-    ? fieldAuthorizations
-        .map(authorization => authorization(variableName))
-        .filter(Boolean)
-        .join(' AND ')
-    : null;
-};
-
-const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
-  const nodeAuthorizations = flatten(
-    typeNames.map(typeName => authorizations[typeName].node || [])
-  );
-  return nodeAuthorizations.length > 0
-    ? nodeAuthorizations
-        .map(authorization => authorization(variableName))
-        .join(' AND ')
-    : null;
+export const getAuthzPredicates = config => {
+  const { authzFieldPredicate, filter, shield } = getRawAuthzPredicates(config);
+  return {
+    filter,
+    apocDoShield: authzFieldPredicate
+      ? (value, argString) =>
+          `CALL apoc.do.when(${authzFieldPredicate}, "${replaceQuotes(
+            value
+          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
+            argString,
+            false
+          )}) YIELD value RETURN value.${config.variableName} AS ${
+            config.variableName
+          }`
+      : identity,
+    apocShield: authzFieldPredicate
+      ? (value, argString) =>
+          `CALL apoc.when(${authzFieldPredicate}, "${replaceQuotes(
+            value
+          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
+            argString,
+            false
+          )}) YIELD value RETURN value.${config.variableName} AS ${
+            config.variableName
+          }`
+      : identity,
+    shield: shield
+      ? value => `CASE WHEN (${shield}) THEN ${value} ELSE NULL END`
+      : identity
+  };
 };
 
 const getRawAuthzPredicates = ({
@@ -87,39 +85,41 @@ const getRawAuthzPredicates = ({
   };
 };
 
-const replaceQuotes = value => value.replace(new RegExp('"', 'g'), '\\"');
-
-export const getAuthzPredicates = config => {
-  const { authzFieldPredicate, filter, shield } = getRawAuthzPredicates(config);
-  return {
-    filter,
-    apocDoShield: authzFieldPredicate
-      ? (value, argString) =>
-          `CALL apoc.do.when(${authzFieldPredicate}, "${replaceQuotes(
-            value
-          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
-            argString,
-            false
-          )}) YIELD value RETURN value.${config.variableName} AS ${
-            config.variableName
-          }`
-      : identity,
-    apocShield: authzFieldPredicate
-      ? (value, argString) =>
-          `CALL apoc.when(${authzFieldPredicate}, "${replaceQuotes(
-            value
-          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
-            argString,
-            false
-          )}) YIELD value RETURN value.${config.variableName} AS ${
-            config.variableName
-          }`
-      : identity,
-    shield: shield
-      ? value => `CASE WHEN (${shield}) THEN ${value} ELSE NULL END`
-      : identity
-  };
+const getAuthzFieldPredicate = ({
+  authorizations,
+  fieldName,
+  schemaType,
+  typeNames,
+  variableName
+}) => {
+  const fieldAuthorizations = flatten(
+    typeNames.map(typeName => {
+      const { fields } = authorizations[typeName];
+      return has(fieldName, fields) && has(schemaType, fields[fieldName])
+        ? fields[fieldName][schemaType] || []
+        : [];
+    })
+  );
+  return fieldAuthorizations.length > 0
+    ? fieldAuthorizations
+        .map(authorization => authorization(variableName))
+        .filter(Boolean)
+        .join(' AND ')
+    : null;
 };
+
+const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
+  const nodeAuthorizations = flatten(
+    typeNames.map(typeName => authorizations[typeName].node || [])
+  );
+  return nodeAuthorizations.length > 0
+    ? nodeAuthorizations
+        .map(authorization => authorization(variableName))
+        .join(' AND ')
+    : null;
+};
+
+const replaceQuotes = value => value.replace(new RegExp('"', 'g'), '\\"');
 
 export const toArgString = (argString, inProcedure = true) =>
   argString

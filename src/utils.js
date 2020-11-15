@@ -8,6 +8,8 @@ import {
 import { getFederatedOperationData } from './federation';
 import neo4j from 'neo4j-driver';
 import _ from 'lodash';
+import { fromPairs } from 'ramda';
+import { isNonNullType } from 'graphql';
 
 function parseArg(arg, variableValues) {
   switch (arg.value.kind) {
@@ -695,12 +697,19 @@ export const initializeMutationParams = ({
   first,
   offset
 }) => {
+  const nullParams = fromPairs(
+    resolveInfo.schema
+      .getMutationType()
+      .getFields()
+      [resolveInfo.fieldName].args.filter(({ type }) => !isNonNullType(type))
+      .map(({ name }) => [name, null])
+  );
   return (isCreateMutation(resolveInfo) ||
     isRelationshipUpdateMutation({ resolveInfo, mutationMeta }) ||
     isRelationshipMergeMutation({ resolveInfo, mutationMeta })) &&
     !mutationTypeCypherDirective
-    ? { params: otherParams, ...{ first, offset } }
-    : { ...otherParams, ...{ first, offset } };
+    ? { params: { ...nullParams, ...otherParams }, ...{ first, offset } }
+    : { ...nullParams, ...otherParams, ...{ first, offset } };
 };
 
 export const getOuterSkipLimit = (first, offset) =>

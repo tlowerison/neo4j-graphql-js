@@ -208,7 +208,7 @@ export const relationFieldOnNodeType = ({
     innerSchemaType,
     resolveInfo,
     schemaType,
-    variableName: safeVariableName
+    variableName
   });
   const { filter, shield } = authzPredicates;
   const [mapProjection, labelPredicate] = buildMapProjection({
@@ -1249,7 +1249,7 @@ export const directedNodeTypeFieldOnRelationType = ({
     innerSchemaType,
     resolveInfo,
     schemaType,
-    variableName: safeVariableName
+    variableName
   });
   const { filter, shield } = authzPredicates;
   const [mapProjection, labelPredicate] = buildMapProjection({
@@ -1502,7 +1502,7 @@ export const customQuery = ({
     schemaType,
     resolveInfo
   });
-  const params = { ...nonNullParams, ...subParams };
+  const params = { ...nonNullParams, ...nonNullParams, ...subParams };
   if (cypherParams) {
     params['cypherParams'] = cypherParams;
   }
@@ -1648,7 +1648,7 @@ export const nodeQuery = ({
     paramIndex: rootParamIndex
   });
 
-  let params = { ...serializedFilter, ...subParams };
+  let params = { ...nonNullParams, ...serializedFilter, ...subParams };
 
   if (cypherParams) {
     params['cypherParams'] = cypherParams;
