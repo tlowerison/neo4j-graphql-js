@@ -38,12 +38,16 @@ const getRawAuthzPredicates = ({
   context: { authorizations },
   cypherParams,
   fieldName,
+  filterVariableName,
   innerSchemaType,
   resolveInfo,
   schemaType,
   typeNames: rawTypeNames,
   variableName
 }) => {
+  const nodeVariableName = filterVariableName
+    ? filterVariableName
+    : variableName;
   const typeNames =
     !rawTypeNames && innerSchemaType
       ? [
@@ -64,7 +68,11 @@ const getRawAuthzPredicates = ({
     variableName
   });
   const authzNodePredicate = variableName
-    ? getAuthzNodePredicate({ authorizations, typeNames, variableName })
+    ? getAuthzNodePredicate({
+        authorizations,
+        typeNames,
+        variableName: nodeVariableName
+      })
     : null;
   const returnType = (resolveInfo.schema.getType(schemaType)?.getFields() ||
     {})[fieldName]?.type;

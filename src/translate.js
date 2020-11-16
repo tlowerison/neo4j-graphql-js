@@ -208,7 +208,8 @@ export const relationFieldOnNodeType = ({
     innerSchemaType,
     resolveInfo,
     schemaType,
-    variableName
+    variableName,
+    filterVariableName: safeVariableName
   });
   const { filter, shield } = authzPredicates;
   const [mapProjection, labelPredicate] = buildMapProjection({
