@@ -80,10 +80,13 @@ const getMe = async ({ session, tx }) => {
 const schema = makeAugmentedSchema({
   typeDefs,
   resolvers: {
-    // Assumes you're using some session management middleware (e.g. express-session) applied before the Apollo server middleware.
+    // Assumes you're using some session management middleware (e.g. express-session)
     login: async (_parent, { email, password }, { session, tx }) => {
       if (session?.me?.uuid) return await getMe({ session, tx });
-      const { records: [record] } = await tx.run('MATCH (me:User { email: $email }) RETURN me { .* }', { email });
+      const { records: [record] } = await tx.run(
+        'MATCH (me:User { email: $email }) RETURN me { .* }',
+        { email },
+      );
       if (!record) return null;
       const { password: passwordHash, ...me } = record.get('me');
       if (!me || !(await compare(password, passwordHash))) return null;
