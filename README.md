@@ -39,7 +39,7 @@ enum Role {
 type User @user {
   username: String
   email: String @me
-  secretStuff: String @admin
+  password: String @admin
   favoriteGenres: [Genre] @relation(name: "APPRECIATES", direction: "OUT") @friend
   favoriteMovies: [Movie] @relation(name: "APPRECIATES", direction: "OUT") @friend
   friends: [User]
@@ -66,9 +66,31 @@ Create an executable schema with auto-generated resolvers for Query and Mutation
 
 ```javascript
 import { makeAugmentedSchema } from 'neo4j-graphql-js';
+import { compare, hash } from 'bcrypt';
+
+const getMe = async ({ session, tx }) => {
+  const {
+    records: [record]
+  } = await tx.run('MATCH (me:User { uuid: $uuid }) RETURN me { .* }', {
+    uuid: session?.me?.uuid
+  });
+  return (record && record.get('me')) || null;
+};
 
 const schema = makeAugmentedSchema({
-  typeDefs
+  typeDefs,
+  resolvers: {
+    // Assumes you're using some session management middleware (e.g. express-session) applied before the Apollo server middleware.
+    login: async (_parent, { email, password }, { session, tx }) => {
+      if (session?.me?.uuid) return await getMe({ session, tx });
+      const { records: [record] } = await tx.run('MATCH (me:User { email: $email }) RETURN me { .* }', { email });
+      if (!record) return null;
+      const { password: passwordHash, ...me } = record.get('me');
+      if (!me || !(await compare(password, passwordHash))) return null;
+      if (session) session.me = me;
+      return { ...me, password: null };
+    }
+  }
 });
 ```
 
