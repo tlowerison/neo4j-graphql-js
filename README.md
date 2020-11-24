@@ -68,12 +68,10 @@ Create an executable schema with auto-generated resolvers for Query and Mutation
 import { makeAugmentedSchema } from 'neo4j-graphql-js';
 import { compare, hash } from 'bcrypt';
 
+const matchMe = 'MATCH (me:User { uuid: $uuid }) RETURN me { .* }';
+
 const getMe = async ({ session, tx }) => {
-  const {
-    records: [record]
-  } = await tx.run('MATCH (me:User { uuid: $uuid }) RETURN me { .* }', {
-    uuid: session?.me?.uuid
-  });
+  const { records: [record] } = await tx.run(matchMe, { uuid: session?.me?.uuid });
   return (record && record.get('me')) || null;
 };
 
@@ -83,10 +81,7 @@ const schema = makeAugmentedSchema({
     // Assumes you're using some session management middleware (e.g. express-session)
     login: async (_parent, { email, password }, { session, tx }) => {
       if (session?.me?.uuid) return await getMe({ session, tx });
-      const { records: [record] } = await tx.run(
-        'MATCH (me:User { email: $email }) RETURN me { .* }',
-        { email },
-      );
+      const { records: [record] } = await tx.run(matchMe, { email });
       if (!record) return null;
       const { password: passwordHash, ...me } = record.get('me');
       if (!me || !(await compare(password, passwordHash))) return null;
