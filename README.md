@@ -37,27 +37,50 @@ enum Role {
 }
 
 type User @user {
+  uuid: ID! @id
   username: String
   email: String @me
   password: String @admin
-  favoriteGenres: [Genre] @relation(name: "APPRECIATES", direction: "OUT") @friend
+  roles: [Role] @admin
   favoriteMovies: [Movie] @relation(name: "APPRECIATES", direction: "OUT") @friend
   friends: [User]
     @relation(name: "KNOWS", direction: "OUT")
     @authz(requires: "this = me OR (me)-[:KNOWS]->(this) OR (me)-[:KNOWS]->(:User)-[:KNOWS]->(this)")
 }
 
+type Query {
+  Me: User @user @cypher(statement: "RETURN me")
+}
+
+type Mutation {
+  AppreciateMovie(movieUUID: ID!): User @user @cypher(statement: """
+    MATCH (movie:Movie { uuid: $movieUUID })
+    MERGE (me)-[:APPRECIATES]->(movie)
+    RETURN me
+  """)
+
+  DeleteMe: Boolean @user @cypher(statement: """
+    DETACH DELETE me
+    RETURN TRUE
+  """)
+
+  DeleteUser(userUUID: ID!): Boolean @admin @cypher(statement: """
+    MATCH (user:User { uuid: $userUUID })
+    DETACH DELETE user
+    RETURN TRUE
+  """)
+}
+
 type Movie {
+    id: ID! @id
     title: String
     year: Int
     imdbRating: Float
-    genres: [Genre] @relation(name: "IN_GENRE", direction: "OUT")
     fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
 }
 type Genre {
     name: String
     movies: [Movie] @relation(name: "IN_GENRE", direction: "IN")
-    fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
 }
 `;
 ```
