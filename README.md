@@ -23,15 +23,41 @@ Start with GraphQL type definitions:
 
 ```javascript
 const typeDefs = `
+# Authn
+# @user := @authn(requires: [USER])
+# @admin := @authn(requires: [ADMIN])
+#
+# Authz
+# @me := @authz(requires: "this = me")
+# @friend := @authz(requires: "this = me OR (me)-[:KNOWS]->(this)")
+
+enum Role {
+  ADMIN
+  USER
+}
+
+type User @user {
+  username: String
+  email: String @me
+  secretStuff: String @admin
+  favoriteGenres: [Genre] @relation(name: "APPRECIATES", direction: "OUT") @friend
+  favoriteMovies: [Movie] @relation(name: "APPRECIATES", direction: "OUT") @friend
+  friends: [User]
+    @relation(name: "KNOWS", direction: "OUT")
+    @authz(requires: "this = me OR (me)-[:KNOWS]->(this) OR (me)-[:KNOWS]->(:User)-[:KNOWS]->(this)")
+}
+
 type Movie {
     title: String
     year: Int
     imdbRating: Float
     genres: [Genre] @relation(name: "IN_GENRE", direction: "OUT")
+    fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
 }
 type Genre {
     name: String
     movies: [Movie] @relation(name: "IN_GENRE", direction: "IN")
+    fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
 }
 `;
 ```
@@ -41,7 +67,9 @@ Create an executable schema with auto-generated resolvers for Query and Mutation
 ```javascript
 import { makeAugmentedSchema } from 'neo4j-graphql-js';
 
-const schema = makeAugmentedSchema({ typeDefs });
+const schema = makeAugmentedSchema({
+  typeDefs
+});
 ```
 
 Create a neo4j-javascript-driver instance:
