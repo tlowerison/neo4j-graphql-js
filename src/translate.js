@@ -1696,7 +1696,7 @@ export const nodeQuery = ({
 
   const matchMe = cypherParams?.me?.uuid
     ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : '';
+    : 'WITH NULL AS me';
   const predicate = predicateClauses ? `WHERE ${predicateClauses} ` : '';
   const { optimization, cypherPart: orderByClause } = orderByValue;
 
