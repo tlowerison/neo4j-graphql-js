@@ -1553,7 +1553,7 @@ export const customQuery = ({
 
   const matchMe = cypherParams?.me?.uuid
     ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me';
+    : 'WITH NULL AS me ';
   const unwindClause =
     cypherParams?.me?.uuid && filter
       ? `UNWIND [y in x WHERE ${filter} | y]`
@@ -1700,7 +1700,7 @@ export const nodeQuery = ({
 
   const matchMe = cypherParams?.me?.uuid
     ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me';
+    : 'WITH NULL AS me ';
   const { env, varNames } = getEnv({ context, resolveInfo });
   const predicate = predicateClauses ? `WHERE ${predicateClauses} ` : '';
   const { optimization, cypherPart: orderByClause } = orderByValue;
@@ -1862,7 +1862,7 @@ export const customMutation = ({
 
   const matchMe = cypherParams?.me?.uuid
     ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me';
+    : 'WITH NULL AS me ';
   const { env, varNames } = getEnv({ context, resolveInfo });
   // TODO(tlowerison): Implement node filter for custom mutations (might be connected to `listVariable`)
   // const unwindClause = cypherParams?.me?.uuid && filter ? `UNWIND [y in x WHERE ${filter} | y]` : 'UNWIND x';

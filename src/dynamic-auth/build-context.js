@@ -2,15 +2,19 @@ export const authorizations = {};
 export const environments = {};
 
 export const buildContext = driver => async ({ req }) => {
-  const driverSession = driver.session();
+  let neo4jSession;
+  let tx;
+  const getNeo4jSession = () =>
+    neo4jSession ? neo4jSession : (neo4jSession = driver.session());
   return {
     authorizations,
     environments,
     driver,
-    driverSession,
+    getNeo4jSession,
     req,
+    closeNeo4jSession: () => neo4jSession && neo4jSession.close(),
     cypherParams: req.session?.me ? { me: req.session.me } : {},
-    session: req.session,
-    tx: driverSession.beginTransaction()
+    getTx: () => (tx ? tx : getNeo4jSession().beginTransaction()),
+    session: req.session
   };
 };
