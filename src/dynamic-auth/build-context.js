@@ -1,9 +1,11 @@
 export const authorizations = {};
+export const environments = {};
 
 export const buildContext = driver => async ({ req }) => {
   const driverSession = driver.session();
   return {
     authorizations,
+    environments,
     driver,
     driverSession,
     req,

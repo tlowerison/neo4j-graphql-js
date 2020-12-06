@@ -76,7 +76,8 @@
     "graphql-auth-directives": "^2.2.1",
     "lodash": "^4.17.19",
     "neo4j-driver": "^4.1.0",
-    "ramda": "^0.27.1"
+    "ramda": "^0.27.1",
+    "xregexp": "^4.4.0"
   },
   "ava": {
     "require": [

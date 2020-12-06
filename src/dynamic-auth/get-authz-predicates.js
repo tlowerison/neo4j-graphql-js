@@ -1,9 +1,12 @@
 import { flatten, has, identity } from 'ramda';
 import { getAdditionalLabels } from '../utils';
+import { getEnv } from './get-env';
 import { isListType } from 'graphql';
+import { toArgString } from './to-arg-string';
 
 export const getAuthzPredicates = config => {
   const { authzFieldPredicate, filter, shield } = getRawAuthzPredicates(config);
+  const { varNames } = getEnv(config);
   return {
     filter,
     apocDoShield: authzFieldPredicate
@@ -12,7 +15,7 @@ export const getAuthzPredicates = config => {
             value
           )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
             argString,
-            false
+            { inProcedure: false, varNames }
           )}) YIELD value RETURN value.${config.variableName} AS ${
             config.variableName
           }`
@@ -23,7 +26,7 @@ export const getAuthzPredicates = config => {
             value
           )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
             argString,
-            false
+            { inProcedure: false, varNames }
           )}) YIELD value RETURN value.${config.variableName} AS ${
             config.variableName
           }`
@@ -76,20 +79,10 @@ const getRawAuthzPredicates = ({
     : null;
   const returnType = (resolveInfo.schema.getType(schemaType)?.getFields() ||
     {})[fieldName]?.type;
-  if (returnType && isListType(returnType)) {
-    return {
-      authzFieldPredicate,
-      filter: authzNodePredicate,
-      shield: authzFieldPredicate
-    };
-  }
-  const shield = [authzFieldPredicate, authzNodePredicate]
-    .filter(Boolean)
-    .join(' AND ');
   return {
     authzFieldPredicate,
-    filter: null,
-    shield: shield !== '' ? shield : null
+    filter: authzNodePredicate,
+    shield: authzFieldPredicate
   };
 };
 
@@ -128,11 +121,3 @@ const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
 };
 
 const replaceQuotes = value => value.replace(new RegExp('"', 'g'), '\\"');
-
-export const toArgString = (argString, inProcedure = true) =>
-  argString
-    ? `{me:${inProcedure ? '$' : ''}me, ${argString.slice(
-        1,
-        argString.length - 1
-      )}}`
-    : `{me:${inProcedure ? '$' : ''}me}`;

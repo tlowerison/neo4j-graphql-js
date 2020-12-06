@@ -345,7 +345,8 @@ const makeBasicAugmentedSchema = ({
 };
 
 export const makeAugmentedSchema = toMakeAugmentedSchema(
-  makeBasicAugmentedSchema
+  makeBasicAugmentedSchema,
+  neo4jgraphql
 );
 
 export const wrapNeo4jgraphql = fn => async (
