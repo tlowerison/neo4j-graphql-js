@@ -19,18 +19,11 @@ npm install --save neo4j-graphql-js
 
 ### Usage
 
-Start with GraphQL type definitions:
+GraphQL type defintions
 
-```javascript
-const typeDefs = `
-# Authn
-# @user := @authn(requires: [USER])
-# @admin := @authn(requires: [ADMIN])
-#
-# Authz
-# @me := @authz(requires: "this = me")
-# @friend := @authz(requires: "this = me OR (me)-[:KNOWS]->(this)")
+###### nodes.graphql
 
+```graphql
 enum Role {
   ADMIN
   USER
@@ -42,73 +35,155 @@ type User @user {
   email: String @me
   password: String @admin
   roles: [Role] @admin
-  favoriteMovies: [Movie] @relation(name: "APPRECIATES", direction: "OUT") @friend
-  friends: [User]
-    @relation(name: "KNOWS", direction: "OUT")
-    @authz(requires: "this = me OR (me)-[:KNOWS]->(this) OR (me)-[:KNOWS]->(:User)-[:KNOWS]->(this)")
+  favoriteMovies: [Movie]
+    @relation(name: "APPRECIATES", direction: "OUT")
+    @knows
+  friends: [User] @relation(name: "KNOWS", direction: "OUT") @mutuallyKnows
+  suggestions: [Suggestion]
+    @relation(name: "RECEIVED_SUGGESTION", direction: "IN")
+    @me
 }
 
+type Movie {
+  uuid: ID! @id
+  title: String
+  year: Int
+  imdbRating: Float
+  fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
+}
+
+type Genre {
+  uuid: ID! @id
+  name: String
+  movies: [Movie] @relation(name: "IN_GENRE", direction: "IN")
+}
+
+type Suggestion @user @inSuggestion {
+  suggestee: User @relation(name: "RECEIVED_SUGGESTION", direction: "OUT")
+  suggestor: User @relation(name: "SENT_SUGGESTION", direction: "IN")
+  movie: Movie @relation(name: "IN_SUGGESTION", direction: "IN")
+}
+```
+
+GraphQL-Cypher auth directives:
+
+###### directives.auth
+
+```graphql
+# Authn
+@user := @authn(requires: [USER])
+@admin := @authn(requires: [ADMIN])
+
+# Authz
+@me := @authz(requires: "'ADMIN' IN me.roles OR this = me")
+
+@mutuallyKnows := @authz(requires: """
+  'ADMIN' IN me.roles OR
+  this = me OR
+  (me)-[:KNOWS*..2]-(this)
+""")
+
+@knows := @authz(requires: """
+  'ADMIN' IN me.roles OR
+  this = me OR
+  (me)-[:KNOWS]-(this)
+""")
+
+@inSuggestion := @authz(requires: """
+  (me)-[:RECEIVED_SUGGESTION|SENT_SUGGESTION]-(this)
+""")
+```
+
+###### operations.graphql
+
+```graphql
 type Query {
   Me: User @user @cypher(statement: "RETURN me")
 }
 
 type Mutation {
-  AppreciateMovie(movieUUID: ID!): User @user @cypher(statement: """
-    MATCH (movie:Movie { uuid: $movieUUID })
-    MERGE (me)-[:APPRECIATES]->(movie)
-    RETURN me
-  """)
+  AppreciateMovie(movieUUID: ID!): User
+    @user
+    @cypher(
+      statement: """
+      MATCH (movie:Movie { uuid: $movieUUID })
+      MERGE (me)-[:APPRECIATES]->(movie)
+      RETURN me
+      """
+    )
 
-  DeleteMe: Boolean @user @cypher(statement: """
-    DETACH DELETE me
-    RETURN TRUE
-  """)
+  DeleteMe: Boolean
+    @user
+    @cypher(
+      statement: """
+      DETACH DELETE me
+      RETURN TRUE
+      """
+    )
 
-  DeleteUser(userUUID: ID!): Boolean @admin @cypher(statement: """
-    MATCH (user:User { uuid: $userUUID })
-    DETACH DELETE user
-    RETURN TRUE
-  """)
-}
+  DeleteUser(userUUID: ID!): Boolean
+    @admin
+    @cypher(
+      statement: """
+      MATCH (user:User { uuid: $userUUID })
+      DETACH DELETE user
+      RETURN TRUE
+      """
+    )
 
-type Movie {
-    id: ID! @id
-    title: String
-    year: Int
-    imdbRating: Float
-    fans: [User] @relation(name: "APPRECIATES", direction: "IN") @admin
+  SuggestMovieToFriend(movieUUID: ID!, userUUID: ID!): Suggestion
+    @user
+    @knows(this: "user")
+    @env(provides: "MATCH (user:User { uuid: $userUUID })")
+    @cypher(
+      statement: """
+      MATCH (movie:Movie { uuid: $movieUUID })
+      MERGE (me)-[:SENT_SUGGESTION]->(suggestion:Suggestion)-[:RECEIVED_SUGGESTION]->(user)
+      MERGE (movie)-[:IN_SUGGESTION]->(suggestion)
+      RETURN suggestion
+      """
+    )
 }
-type Genre {
-    name: String
-    movies: [Movie] @relation(name: "IN_GENRE", direction: "IN")
-}
-`;
 ```
 
 Create an executable schema with auto-generated resolvers for Query and Mutation types, ordering, pagination, and support for computed fields defined using the `@cypher` GraphQL schema directive:
 
 ```javascript
-import { makeAugmentedSchema } from 'neo4j-graphql-js';
 import { compare, hash } from 'bcrypt';
+import { join } from 'path';
+import { makeAugmentedSchema } from 'neo4j-graphql-js';
+import { readFileSync } from 'fs';
+import { sync } from 'glob';
+
+const readFiles = (pattern: string) =>
+  sync(join(__dirname, pattern))
+    .map(filename => readFileSync(filename, 'utf-8'))
+    .join('\n');
 
 const getMe = async ({ session, tx }) => {
-  const { records: [record] } = await tx.run(
-    'MATCH (me:User { uuid: $uuid }) RETURN me { .* }',
-    { uuid: session?.me?.uuid },
-  );
+  const {
+    records: [record]
+  } = await tx.run('MATCH (me:User { uuid: $uuid }) RETURN me { .* }', {
+    uuid: session?.me?.uuid
+  });
   return (record && record.get('me')) || null;
 };
 
-const schema = makeAugmentedSchema({
-  typeDefs,
+export const schema = makeAugmentedSchema({
+  config: {
+    auth: readFiles('./**/*.auth'),
+    mutation: false
+  },
+  typeDefs: readFiles('./**/*.graphql'),
   resolvers: {
     // Assumes you're using some session management middleware (e.g. express-session)
     login: async (_parent, { email, password }, { session, tx }) => {
       if (session?.me?.uuid) return await getMe({ session, tx });
-      const { records: [record] } = await tx.run(
-        'MATCH (me:User { email: $email }) RETURN me { .* }',
-        { email },
-      );
+      const {
+        records: [record]
+      } = await tx.run('MATCH (me:User { email: $email }) RETURN me { .* }', {
+        email
+      });
       if (!record) return null;
       const { password: passwordHash, ...me } = record.get('me');
       if (!me || !(await compare(password, passwordHash))) return null;
