@@ -1,11 +1,11 @@
 import {
   directive,
-  directives,
   isDefinition,
   isValidNesting,
   nest,
   valueNames
 } from './constants';
+import { directives } from '../make-directive';
 import { fromPairs, last, slice, zip } from 'ramda';
 import { getDirectiveInputs } from './get-directive-inputs';
 import { matchRecursive } from 'xregexp';

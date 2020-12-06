@@ -1,7 +1,35 @@
+import { DirectiveLocation, GraphQLList } from 'graphql';
 import { defaultFieldResolver } from 'graphql';
 import { intersection } from 'ramda';
 
 export const AUTHENTICATION_NAME = 'authn';
+export const AUTHENTICATION_DIRECTIVE = {
+  customParams: [],
+  instances: [],
+  locations: [
+    DirectiveLocation.FIELD_DEFINITION,
+    DirectiveLocation.INTERFACE,
+    DirectiveLocation.OBJECT,
+    DirectiveLocation.UNION
+  ],
+  params: [
+    {
+      name: 'requires',
+      transform: value => value.split(',').map(role => role.trim()),
+      type: {
+        getDefinition: schema => {
+          const RoleType = schema.getType('Role');
+          if (!RoleType) {
+            throw new Error('Role enum is required');
+          }
+          return { type: new GraphQLList(RoleType), defaultValue: 'NONE' };
+        },
+        value: '[Role!]!'
+      },
+      wrappers: [{ left: '[', right: ']' }]
+    }
+  ]
+};
 
 const visit = (resolver, requires) =>
   async function(root, params, context, info) {

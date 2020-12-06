@@ -1,6 +1,33 @@
+import { DirectiveLocation, GraphQLString } from 'graphql';
 import { has } from 'ramda';
 
 export const ENVIRONMENT_NAME = 'env';
+export const ENVIRONMENT_DIRECTIVE = {
+  customParams: [
+    {
+      name: 'this',
+      wrappers: [
+        { left: '"', right: '"' },
+        { left: '"""', right: '"""' }
+      ]
+    }
+  ],
+  instances: [],
+  locations: [DirectiveLocation.FIELD_DEFINITION],
+  params: [
+    {
+      name: 'provides',
+      type: {
+        getDefinition: () => ({ type: GraphQLString, defaultValue: '' }),
+        value: 'String!'
+      },
+      wrappers: [
+        { left: '"', right: '"' },
+        { left: '"""', right: '"""' }
+      ]
+    }
+  ]
+};
 
 export const makeEnvironmentDirective = (
   name,

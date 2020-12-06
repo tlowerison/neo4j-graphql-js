@@ -1,12 +1,15 @@
 import {
+  AUTHENTICATION_DIRECTIVE,
   AUTHENTICATION_NAME,
   makeAuthenticationDirective
 } from './make-authentication-directive';
 import {
+  AUTHORIZATION_DIRECTIVE,
   AUTHORIZATION_NAME,
   makeAuthorizationDirective
 } from './make-authorization-directive';
 import {
+  ENVIRONMENT_DIRECTIVE,
   ENVIRONMENT_NAME,
   makeEnvironmentDirective
 } from './make-environment-directive';
@@ -15,9 +18,15 @@ import { GraphQLDirective } from 'graphql';
 import { SchemaDirectiveVisitor } from 'apollo-server-express';
 import { fromPairs, has, map } from 'ramda';
 
-export { AUTHENTICATION_NAME } from './make-authentication-directive';
-export { AUTHORIZATION_NAME } from './make-authorization-directive';
-export { ENVIRONMENT_NAME } from './make-environment-directive';
+export * from './make-authentication-directive';
+export * from './make-authorization-directive';
+export * from './make-environment-directive';
+
+export const directives = {
+  [AUTHENTICATION_NAME]: AUTHENTICATION_DIRECTIVE,
+  [AUTHORIZATION_NAME]: AUTHORIZATION_DIRECTIVE,
+  [ENVIRONMENT_NAME]: ENVIRONMENT_DIRECTIVE
+};
 
 const makeDirectives = {
   [AUTHENTICATION_NAME]: makeAuthenticationDirective,

@@ -1,4 +1,5 @@
-import { alphanumeric, directives } from './constants';
+import { alphanumeric } from './constants';
+import { directives } from '../make-directive';
 import { intersection, map } from 'ramda';
 
 export const decodifyDirectiveInstance = (

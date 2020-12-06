@@ -1,7 +1,39 @@
+import { DirectiveLocation, GraphQLString } from 'graphql';
 import { has } from 'ramda';
 import { typeIdentifiers } from '../../utils';
 
 export const AUTHORIZATION_NAME = 'authz';
+export const AUTHORIZATION_DIRECTIVE = {
+  customParams: [
+    {
+      name: 'this',
+      wrappers: [
+        { left: '"', right: '"' },
+        { left: '"""', right: '"""' }
+      ]
+    }
+  ],
+  instances: [],
+  locations: [
+    DirectiveLocation.FIELD_DEFINITION,
+    DirectiveLocation.INTERFACE,
+    DirectiveLocation.OBJECT,
+    DirectiveLocation.UNION
+  ],
+  params: [
+    {
+      name: 'requires',
+      type: {
+        getDefinition: () => ({ type: GraphQLString, defaultValue: 'FALSE' }),
+        value: 'String!'
+      },
+      wrappers: [
+        { left: '"', right: '"' },
+        { left: '"""', right: '"""' }
+      ]
+    }
+  ]
+};
 
 const toAuthorization = requires => variableName =>
   `(${requires.replace(new RegExp('this', 'g'), variableName)})`;

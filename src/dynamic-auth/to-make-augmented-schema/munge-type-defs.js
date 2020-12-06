@@ -15,9 +15,10 @@ import {
   zip
 } from 'ramda';
 import { decodifyDirectiveInstance } from './decodify-directive-instance';
-import { directives, match, valueNames } from './constants';
+import { directives } from '../make-directive';
 import { getDirectiveAST } from './get-directive-ast';
 import { getDirectiveInputs } from './get-directive-inputs';
+import { match, valueNames } from './constants';
 import { matchRecursive } from 'xregexp';
 
 export const mungeTypeDefs = config => {
