@@ -38,10 +38,9 @@ export async function neo4jgraphql(
   object,
   params,
   context,
-  resolveInfo
-  // debugFlag,
+  resolveInfo,
+  debugFlag
 ) {
-  const debugFlag = true;
   if (isFederatedOperation({ resolveInfo })) {
     return await executeFederatedOperation({
       object,

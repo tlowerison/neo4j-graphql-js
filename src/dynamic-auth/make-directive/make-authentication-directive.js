@@ -1,4 +1,6 @@
+import { AuthorizationError } from '../errors';
 import { DirectiveLocation, GraphQLList } from 'graphql';
+import { createError } from 'apollo-errors';
 import { defaultFieldResolver } from 'graphql';
 import { intersection } from 'ramda';
 
@@ -14,7 +16,7 @@ export const AUTHENTICATION_DIRECTIVE = {
   ],
   params: [
     {
-      name: 'requires',
+      name: 'roles',
       transform: value => value.split(',').map(role => role.trim()),
       type: {
         getDefinition: schema => {
@@ -22,45 +24,73 @@ export const AUTHENTICATION_DIRECTIVE = {
           if (!RoleType) {
             throw new Error('Role enum is required');
           }
-          return { type: new GraphQLList(RoleType), defaultValue: 'NONE' };
+          return { type: new GraphQLList(RoleType) };
         },
         value: '[Role!]!'
+      },
+      wrappers: [{ left: '[', right: ']' }]
+    },
+    {
+      name: 'scopes',
+      transform: value => value.split(',').map(scope => scope.trim()),
+      type: {
+        getDefinition: schema => {
+          const ScopeType = schema.getType('Scope');
+          if (!ScopeType) {
+            throw new Error('Scope enum is required');
+          }
+          return { type: new GraphQLList(ScopeType) };
+        },
+        value: '[Scope!]!'
       },
       wrappers: [{ left: '[', right: ']' }]
     }
   ]
 };
 
-const visit = (resolver, requires) =>
-  async function(root, params, context, info) {
+const visit = (resolve, roles, scopes, shouldThrowErrorOnFail) =>
+  function(root, params, context, info) {
     const userRoles = context.session?.me?.roles;
-    if (!userRoles || intersection(requires, userRoles).length === 0)
-      return null;
-    const data = await resolver.call(this, root, params, context, info);
-    return data;
+    const allowedRoles = args.roles || this.args.roles || [];
+    const sessionScopes = context.session?.scopes;
+    const allowedScopes = args.scopes || this.args.scopes || [];
+    if (
+      !(
+        userRoles &&
+        sessionScopes &&
+        (allowedRoles.length === 0 ||
+          intersection(allowedRoles, userRoles).length > 0) &&
+        (allowedScopes.length === 0 ||
+          intersection(allowedScopes, sessionScopes).length > 0)
+      )
+    ) {
+      if (shouldThrowErrorOnFail) {
+        throw new AuthorizationError();
+      } else {
+        return null;
+      }
+    }
+    return resolve.call(this, root, params, context, info);
   };
 
 export const makeAuthenticationDirective = (name, args) => ({
   visitFieldDefinition(field) {
     const { resolve = defaultFieldResolver } = field;
-    field.resolve = async function(root, params, context, info) {
-      const userRoles = context.session?.me?.roles;
-      if (
-        !userRoles ||
-        intersection(args.requires || this.args.requires, userRoles).length ===
-          0
-      )
-        return null;
-      const data = await resolve.call(this, root, params, context, info);
-      return data;
-    };
+    field.resolve = visit(
+      resolveInterface,
+      args.roles || this.args.roles || [],
+      args.scopes || this.args.scopes || [],
+      true
+    );
   },
   visitInterface(interfaceType) {
     const { resolveInterface } = interfaceType;
     if (resolveInterface) {
       interfaceType.resolveInterface = visit(
         resolveInterface,
-        args.requires || this.args.requires
+        args.roles || this.args.roles || [],
+        args.scopes || this.args.scopes || [],
+        false
       );
     }
   },
@@ -69,7 +99,9 @@ export const makeAuthenticationDirective = (name, args) => ({
     if (resolveObject) {
       objectType.resolveObject = visit(
         resolveObject,
-        args.requires || this.args.requires
+        args.roles || this.args.roles || [],
+        args.scopes || this.args.scopes || [],
+        false
       );
     }
   },
@@ -78,7 +110,9 @@ export const makeAuthenticationDirective = (name, args) => ({
     if (resolveUnion) {
       unionType.resolveUnion = visit(
         resolveUnion,
-        args.requires || this.args.requires
+        args.roles || this.args.roles || [],
+        args.scopes || this.args.scopes || [],
+        false
       );
     }
   }
