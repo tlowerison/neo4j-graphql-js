@@ -18,7 +18,9 @@ export const ENVIRONMENT_DIRECTIVE = {
     {
       name: 'provides',
       type: {
-        getDefinition: () => ({ type: GraphQLString, defaultValue: '' }),
+        defaultValue: '',
+        getType: () => GraphQLString,
+        required: true,
         value: 'String!'
       },
       wrappers: [

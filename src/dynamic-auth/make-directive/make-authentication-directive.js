@@ -19,13 +19,15 @@ export const AUTHENTICATION_DIRECTIVE = {
       name: 'roles',
       transform: value => value.split(',').map(role => role.trim()),
       type: {
-        getDefinition: schema => {
+        defaultValue: [],
+        getType: schema => {
           const RoleType = schema.getType('Role');
           if (!RoleType) {
             throw new Error('Role enum is required');
           }
-          return { type: new GraphQLList(RoleType) };
+          return new GraphQLList(RoleType);
         },
+        required: false,
         value: '[Role!]!'
       },
       wrappers: [{ left: '[', right: ']' }]
@@ -34,13 +36,15 @@ export const AUTHENTICATION_DIRECTIVE = {
       name: 'scopes',
       transform: value => value.split(',').map(scope => scope.trim()),
       type: {
-        getDefinition: schema => {
+        defaultValue: [],
+        getType: schema => {
           const ScopeType = schema.getType('Scope');
           if (!ScopeType) {
             throw new Error('Scope enum is required');
           }
-          return { type: new GraphQLList(ScopeType) };
+          return new GraphQLList(ScopeType);
         },
+        required: false,
         value: '[Scope!]!'
       },
       wrappers: [{ left: '[', right: ']' }]
@@ -48,12 +52,10 @@ export const AUTHENTICATION_DIRECTIVE = {
   ]
 };
 
-const visit = (resolve, roles, scopes, shouldThrowErrorOnFail) =>
+const visit = (resolve, allowedRoles, allowedScopes, shouldThrowErrorOnFail) =>
   function(root, params, context, info) {
     const userRoles = context.session?.me?.roles;
-    const allowedRoles = args.roles || this.args.roles || [];
     const sessionScopes = context.session?.scopes;
-    const allowedScopes = args.scopes || this.args.scopes || [];
     if (
       !(
         userRoles &&
@@ -75,13 +77,15 @@ const visit = (resolve, roles, scopes, shouldThrowErrorOnFail) =>
 
 export const makeAuthenticationDirective = (name, args) => ({
   visitFieldDefinition(field) {
-    const { resolve = defaultFieldResolver } = field;
-    field.resolve = visit(
-      resolveInterface,
-      args.roles || this.args.roles || [],
-      args.scopes || this.args.scopes || [],
-      true
-    );
+    const { resolve } = field;
+    if (resolve) {
+      field.resolve = visit(
+        resolve,
+        args.roles || this.args.roles || [],
+        args.scopes || this.args.scopes || [],
+        true
+      );
+    }
   },
   visitInterface(interfaceType) {
     const { resolveInterface } = interfaceType;

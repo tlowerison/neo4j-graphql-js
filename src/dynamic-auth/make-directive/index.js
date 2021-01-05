@@ -65,9 +65,9 @@ export const makeDirective = (
         name,
         locations,
         args: fromPairs(
-          params.map(({ name, type: { getDefinition } }) => [
+          params.map(({ name, type: { defaultValue, getType } }) => [
             name,
-            getDefinition(schema)
+            { defaultValue, type: getType(schema) }
           ])
         )
       });

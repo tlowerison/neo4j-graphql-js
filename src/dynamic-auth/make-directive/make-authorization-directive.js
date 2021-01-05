@@ -24,7 +24,9 @@ export const AUTHORIZATION_DIRECTIVE = {
     {
       name: 'requires',
       type: {
-        getDefinition: () => ({ type: GraphQLString, defaultValue: 'FALSE' }),
+        defaultValue: 'FALSE',
+        getType: () => GraphQLString,
+        required: true,
         value: 'String!'
       },
       wrappers: [
