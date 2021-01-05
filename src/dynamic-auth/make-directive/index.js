@@ -1,9 +1,4 @@
 import {
-  AUTHENTICATION_DIRECTIVE,
-  AUTHENTICATION_NAME,
-  makeAuthenticationDirective
-} from './make-authentication-directive';
-import {
   AUTHORIZATION_DIRECTIVE,
   AUTHORIZATION_NAME,
   makeAuthorizationDirective
@@ -18,18 +13,15 @@ import { GraphQLDirective } from 'graphql';
 import { SchemaDirectiveVisitor } from 'apollo-server-express';
 import { fromPairs, has, map } from 'ramda';
 
-export * from './make-authentication-directive';
 export * from './make-authorization-directive';
 export * from './make-environment-directive';
 
 export const directives = {
-  [AUTHENTICATION_NAME]: AUTHENTICATION_DIRECTIVE,
   [AUTHORIZATION_NAME]: AUTHORIZATION_DIRECTIVE,
   [ENVIRONMENT_NAME]: ENVIRONMENT_DIRECTIVE
 };
 
 const makeDirectives = {
-  [AUTHENTICATION_NAME]: makeAuthenticationDirective,
   [AUTHORIZATION_NAME]: makeAuthorizationDirective,
   [ENVIRONMENT_NAME]: makeEnvironmentDirective
 };
@@ -77,7 +69,7 @@ export const makeDirective = (
       for (let i = 0; i < this.directiveInstances.length; i += 1) {
         const directiveInstance = this.directiveInstances[i];
         if (has('visitFieldDefinition', directiveInstance)) {
-          directiveInstance.visitFieldDefinition(...args);
+          directiveInstance.visitFieldDefinition.call(this, ...args);
         }
       }
     }
@@ -86,7 +78,7 @@ export const makeDirective = (
       for (let i = 0; i < this.directiveInstances.length; i += 1) {
         const directiveInstance = this.directiveInstances[i];
         if (has('visitInterface', directiveInstance)) {
-          directiveInstance.visitInterface(...args);
+          directiveInstance.visitInterface.call(this, ...args);
         }
       }
     }
@@ -95,7 +87,7 @@ export const makeDirective = (
       for (let i = 0; i < this.directiveInstances.length; i += 1) {
         const directiveInstance = this.directiveInstances[i];
         if (has('visitObject', directiveInstance)) {
-          directiveInstance.visitObject(...args);
+          directiveInstance.visitObject.call(this, ...args);
         }
       }
     }
@@ -104,7 +96,7 @@ export const makeDirective = (
       for (let i = 0; i < this.directiveInstances.length; i += 1) {
         const directiveInstance = this.directiveInstances[i];
         if (has('visitUnion', directiveInstance)) {
-          directiveInstance.visitUnion(...args);
+          directiveInstance.visitUnion.call(this, ...args);
         }
       }
     }

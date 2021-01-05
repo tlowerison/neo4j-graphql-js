@@ -36,8 +36,12 @@ type User @user {
   password: String @admin
   roles: [Role] @admin
   friends: [User] @relation(name: "KNOWS", direction: "OUT") @mutuallyKnows
-  favoriteMovies: [Movie] @relation(name: "APPRECIATES", direction: "OUT") @knows
-  suggestions: [Suggestion] @relation(name: "RECEIVED_SUGGESTION", direction: "IN") @me
+  favoriteMovies: [Movie]
+    @relation(name: "APPRECIATES", direction: "OUT")
+    @knows
+  suggestions: [Suggestion]
+    @relation(name: "RECEIVED_SUGGESTION", direction: "IN")
+    @me
 }
 
 type Movie {
@@ -67,25 +71,25 @@ GraphQL-Cypher auth directives:
 
 ```graphql
 # Authn
-@user := @authn(requires: [USER])
-@admin := @authn(requires: [ADMIN])
+@user := @authz(roles: [USER, ADMIN])
+@admin := @authz(roles: [ADMIN])
 
 # Authz
-@me := @authz(requires: "'ADMIN' IN me.roles OR this = me")
+@me := @authz(statement: "'ADMIN' IN me.roles OR this = me")
 
-@knows := @authz(requires: """
+@knows := @authz(statement: """
   'ADMIN' IN me.roles OR
   this = me OR
   (me)-[:KNOWS]-(this)
 """)
 
-@mutuallyKnows := @authz(requires: """
+@mutuallyKnows := @authz(statement: """
   'ADMIN' IN me.roles OR
   this = me OR
   (me)-[:KNOWS*..2]-(this)
 """)
 
-@inSuggestion := @authz(requires: """
+@inSuggestion := @authz(statement: """
   (me)-[:RECEIVED_SUGGESTION|SENT_SUGGESTION]-(this)
 """)
 ```
@@ -100,37 +104,45 @@ type Query {
 type Mutation {
   AppreciateMovie(movieUUID: ID!): User
     @user
-    @cypher(statement: """
+    @cypher(
+      statement: """
       MATCH (movie:Movie { uuid: $movieUUID })
       MERGE (me)-[:APPRECIATES]->(movie)
       RETURN me
-    """)
+      """
+    )
 
   DeleteMe: Boolean
     @user
-    @cypher(statement: """
+    @cypher(
+      statement: """
       DETACH DELETE me
       RETURN TRUE
-    """)
+      """
+    )
 
   DeleteUser(userUUID: ID!): Boolean
     @admin
-    @cypher(statement: """
+    @cypher(
+      statement: """
       MATCH (user:User { uuid: $userUUID })
       DETACH DELETE user
       RETURN TRUE
-    """)
+      """
+    )
 
   SuggestMovieToFriend(movieUUID: ID!, userUUID: ID!): Suggestion
     @user
     @knows(this: "user")
     @env(provides: "MATCH (user:User { uuid: $userUUID })")
-    @cypher(statement: """
+    @cypher(
+      statement: """
       MATCH (movie:Movie { uuid: $movieUUID })
       MERGE (me)-[:SENT_SUGGESTION]->(suggestion:Suggestion)-[:RECEIVED_SUGGESTION]->(user)
       MERGE (movie)-[:IN_SUGGESTION]->(suggestion)
       RETURN suggestion
-    """)
+      """
+    )
 }
 ```
 

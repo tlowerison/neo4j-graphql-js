@@ -16,11 +16,12 @@ export const getDirectiveInputs = (matchValue, directiveValue, inputs) =>
       }
     });
     const index = mungedValues.findIndex(identity);
-    if (index === -1 && (!type || type.required)) {
+    const required = !type || type.value[type.value.length - 1] === '!';
+    if (index === -1 && required) {
       throw new Error(
         `Directive ${directiveValue} expected "${name}" argument but didn't receive one.`
       );
-    } else if (index === -1 && type && !type.required) {
+    } else if (index === -1 && !required) {
       return { name, value: type.defaultValue };
     }
     let value = mungedValues[index]

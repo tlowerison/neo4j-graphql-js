@@ -19,27 +19,30 @@ export const decodifyDirectiveInstance = (
             .map(c => String.fromCharCode(c))
             .join('')
         }));
-
   return {
     customParams: [],
     instances: customDirectives[name].instances.map(({ args, name }) => ({
       name,
       args: map(
         arg =>
-          allArgs.reduce(
-            (acc, { name, value }) =>
-              acc
-                .replace(
-                  new RegExp(
-                    `(?<!${alphanumeric})${name}(?!${alphanumeric})`,
-                    'g'
-                  ),
-                  value
-                )
-                .replace(new RegExp('( |\t|\n)+', 'g'), ' ')
-                .trim(),
-            arg
-          ),
+          typeof arg !== 'string'
+            ? arg
+            : allArgs.reduce(
+                (acc, { name, value }) =>
+                  // TODO (tlowerison): Make customParam subsitution generic per directive argument and defined by
+                  // argument type (currently only support customParam substitution for GraphQLString directive arguments)
+                  acc
+                    .replace(
+                      new RegExp(
+                        `(?<!${alphanumeric})${name}(?!${alphanumeric})`,
+                        'g'
+                      ),
+                      value
+                    )
+                    .replace(new RegExp('( |\t|\n)+', 'g'), ' ')
+                    .trim(),
+                arg
+              ),
         args
       )
     })),
