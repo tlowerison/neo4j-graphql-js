@@ -134,7 +134,6 @@ const visit = (
         )
       )
     ) {
-      const operationName = info.operation.name?.value;
       throw new AuthorizationError({
         message: `Unauthorized: Cannot access ${
           isFieldLevel ? `${parentName}.${fieldName}` : parentName
