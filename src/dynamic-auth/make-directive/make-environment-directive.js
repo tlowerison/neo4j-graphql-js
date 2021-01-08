@@ -1,4 +1,4 @@
-import { DirectiveLocation, GraphQLString } from 'graphql';
+import { DirectiveLocation, GraphQLNonNull, GraphQLString } from 'graphql';
 import { has } from 'ramda';
 
 export const ENVIRONMENT_NAME = 'env';
@@ -19,9 +19,9 @@ export const ENVIRONMENT_DIRECTIVE = {
       name: 'provides',
       type: {
         defaultValue: '',
-        getType: () => GraphQLString,
-        required: true,
-        value: 'String!'
+        getType: () => new GraphQLNonNull(GraphQLString),
+        getTypeDef: () => 'String!',
+        getTypeName: () => 'String!'
       },
       wrappers: [
         { left: '"', right: '"' },

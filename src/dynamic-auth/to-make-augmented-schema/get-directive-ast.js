@@ -11,9 +11,13 @@ import { getDirectiveInputs } from './get-directive-inputs';
 import { matchRecursive } from 'xregexp';
 
 export const getDirectiveAST = config => {
-  if (typeof config.config?.auth !== 'string') return;
+  if (typeof config.config.auth.typeDefs !== 'string') {
+    throw new Error('config.auth.typeDefs must be a string');
+  }
   const recursiveMatches = nest(
-    matchRecursive(config.config?.auth, '\\(', '\\)', 'gi', { valueNames })
+    matchRecursive(config.config.auth.typeDefs, '\\(', '\\)', 'gi', {
+      valueNames
+    })
   );
   if (recursiveMatches.length === 0) return recursiveMatches;
   const lastRecursiveMatch = last(recursiveMatches);

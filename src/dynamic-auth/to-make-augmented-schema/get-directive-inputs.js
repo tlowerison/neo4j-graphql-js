@@ -1,7 +1,12 @@
 import { matchRecursive } from 'xregexp';
 import { identity } from 'ramda';
 
-export const getDirectiveInputs = (matchValue, directiveValue, inputs) =>
+export const getDirectiveInputs = (
+  matchValue,
+  directiveValue,
+  inputs,
+  config
+) =>
   inputs.map(({ name, transform, type, wrappers }) => {
     const mungedValues = wrappers.map(({ left, right }) => {
       try {
@@ -16,7 +21,11 @@ export const getDirectiveInputs = (matchValue, directiveValue, inputs) =>
       }
     });
     const index = mungedValues.findIndex(identity);
-    const required = !type || type.value[type.value.length - 1] === '!';
+    let required = !type;
+    if (type && type.getTypeDef && type.getTypeName) {
+      const typeDef = type.getTypeDef(type.getTypeName(config));
+      required = typeDef[typeDef.length - 1] === '!';
+    }
     if (index === -1 && required) {
       throw new Error(
         `Directive ${directiveValue} expected "${name}" argument but didn't receive one.`

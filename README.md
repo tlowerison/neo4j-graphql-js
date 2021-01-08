@@ -19,7 +19,32 @@ npm install --save neo4j-graphql-js
 
 ### Usage
 
-GraphQL type defintions
+###### directives.auth
+
+```graphql
+# Authn
+@user := @authz(roles: [USER, ADMIN])
+@admin := @authz(roles: [ADMIN])
+
+# Authz
+@me := @authz(statement: "'ADMIN' IN me.roles OR this = me")
+
+@knows := @authz(statement: """
+  'ADMIN' IN me.roles OR
+  this = me OR
+  (me)-[:KNOWS]-(this)
+""")
+
+@mutuallyKnows := @authz(statement: """
+  'ADMIN' IN me.roles OR
+  this = me OR
+  (me)-[:KNOWS*..2]-(this)
+""")
+
+@inSuggestion := @authz(statement: """
+  (me)-[:RECEIVED_SUGGESTION|SENT_SUGGESTION]-(this)
+""")
+```
 
 ###### nodes.graphql
 
@@ -65,35 +90,6 @@ type Suggestion @user @inSuggestion {
 }
 ```
 
-GraphQL-Cypher auth directives:
-
-###### directives.auth
-
-```graphql
-# Authn
-@user := @authz(roles: [USER, ADMIN])
-@admin := @authz(roles: [ADMIN])
-
-# Authz
-@me := @authz(statement: "'ADMIN' IN me.roles OR this = me")
-
-@knows := @authz(statement: """
-  'ADMIN' IN me.roles OR
-  this = me OR
-  (me)-[:KNOWS]-(this)
-""")
-
-@mutuallyKnows := @authz(statement: """
-  'ADMIN' IN me.roles OR
-  this = me OR
-  (me)-[:KNOWS*..2]-(this)
-""")
-
-@inSuggestion := @authz(statement: """
-  (me)-[:RECEIVED_SUGGESTION|SENT_SUGGESTION]-(this)
-""")
-```
-
 ###### operations.graphql
 
 ```graphql
@@ -131,6 +127,8 @@ type Mutation {
       """
     )
 
+  SignIn(email: String!, password: String!): User
+
   SuggestMovieToFriend(movieUUID: ID!, userUUID: ID!): Suggestion
     @user
     @knows(this: "user")
@@ -148,6 +146,8 @@ type Mutation {
 
 Create an executable schema with auto-generated resolvers for Query and Mutation types, ordering, pagination, and support for computed fields defined using the `@cypher` GraphQL schema directive:
 
+###### schema.js
+
 ```javascript
 import { compare, hash } from 'bcrypt';
 import { join } from 'path';
@@ -160,10 +160,13 @@ const readFiles = (pattern: string) =>
     .map(filename => readFileSync(filename, 'utf-8'))
     .join('\n');
 
-const getMe = async ({ session, tx }) => {
+export const getCredentials = (session, me) => session?.me;
+const setCredentials = (session, me) => (session.me = me);
+
+const getMe = async ({ getTx, session }) => {
   const {
     records: [record]
-  } = await tx.run('MATCH (me:User { uuid: $uuid }) RETURN me { .* }', {
+  } = await getTx().run('MATCH (me:User { uuid: $uuid }) RETURN me { .* }', {
     uuid: session?.me?.uuid
   });
   return (record && record.get('me')) || null;
@@ -171,46 +174,60 @@ const getMe = async ({ session, tx }) => {
 
 export const schema = makeAugmentedSchema({
   config: {
-    auth: readFiles('./**/*.auth'),
+    auth: {
+      role: 'Role', // optional parameter that defaults to "Role"
+      // should be provided if your role enum has a different name
+      typeDefs: readFiles('./**/*.auth')
+    },
     mutation: false
   },
   typeDefs: readFiles('./**/*.graphql'),
   resolvers: {
     // Assumes you're using some session management middleware (e.g. express-session)
-    login: async (_parent, { email, password }, { session, tx }) => {
-      if (session?.me?.uuid) return await getMe({ session, tx });
+    login: async (_parent, { email, password }, { getTx, session }) => {
+      if (session?.me?.uuid) return await getMe({ getTx, session });
       const {
         records: [record]
-      } = await tx.run('MATCH (me:User { email: $email }) RETURN me { .* }', {
-        email
-      });
-      if (!record) return null;
+      } = await getTx().run(
+        'MATCH (me:User { email: $email }) RETURN me { .* }',
+        { email }
+      );
+      if (!record) {
+        return null;
+      }
       const { password: passwordHash, ...me } = record.get('me');
-      if (!me || !(await compare(password, passwordHash))) return null;
-      if (session) session.me = me;
+      if (!me || !(await compare(password, passwordHash))) {
+        return null;
+      }
+      if (session) {
+        setCredentials(session, me);
+      }
       return { ...me, password: null };
     }
   }
 });
 ```
 
-Create a neo4j-javascript-driver instance:
+Use your favorite JavaScript GraphQL server implementation to serve your GraphQL schema, injecting the Neo4j driver instance into the context so your data can be resolved in Neo4j:
 
 ```javascript
+import { ApolloServer } from 'apollo-server';
+import { buildContext } from 'neo4j-graphql-js';
+import { getCredentials, schema } from './schema';
 import { v1 as neo4j } from 'neo4j-driver';
 
 const driver = neo4j.driver(
   'bolt://localhost:7687',
   neo4j.auth.basic('neo4j', 'letmein')
 );
-```
 
-Use your favorite JavaScript GraphQL server implementation to serve your GraphQL schema, injecting the Neo4j driver instance into the context so your data can be resolved in Neo4j:
-
-```javascript
-import { ApolloServer } from 'apollo-server';
-
-const server = new ApolloServer({ schema, context: { driver } });
+const server = new ApolloServer({
+  schema,
+  buildContext(driver, {
+    credentials: getCredentials,
+    primaryKeys: ["uuid"],
+  }),
+});
 
 server.listen(3003, '0.0.0.0').then(({ url }) => {
   console.log(`GraphQL API ready at ${url}`);

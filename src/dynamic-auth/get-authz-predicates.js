@@ -61,8 +61,9 @@ const getRawAuthzPredicates = ({
           )
         ]
       : rawTypeNames || [];
-  if (!typeNames.some(typeName => has(typeName, authorizations)))
+  if (!typeNames.some(typeName => has(typeName, authorizations))) {
     return { filter: null, shield: null };
+  }
   const authzFieldPredicate = getAuthzFieldPredicate({
     authorizations,
     fieldName,
@@ -77,12 +78,10 @@ const getRawAuthzPredicates = ({
         variableName: nodeVariableName
       })
     : null;
-  const returnType = (resolveInfo.schema.getType(schemaType)?.getFields() ||
-    {})[fieldName]?.type;
   return {
-    authzFieldPredicate,
+    authzFieldPredicate: authzFieldPredicate?.shield || null,
     filter: authzNodePredicate,
-    shield: authzFieldPredicate
+    shield: authzFieldPredicate?.shield || null
   };
 };
 
@@ -101,12 +100,14 @@ const getAuthzFieldPredicate = ({
         : [];
     })
   );
-  return fieldAuthorizations.length > 0
-    ? fieldAuthorizations
-        .map(authorization => authorization(variableName))
-        .filter(Boolean)
-        .join(' AND ')
-    : null;
+  if (fieldAuthorizations.length === 0) {
+    return null;
+  }
+  return {
+    shield: fieldAuthorizations
+      .map(({ shield }) => shield(variableName))
+      .join(' AND ')
+  };
 };
 
 const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {

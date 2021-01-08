@@ -32,11 +32,12 @@ const bindDirectiveInstance = (directiveInstance, THIS) =>
 export const makeDirective = (
   { instances, locations, params },
   name,
-  context = {}
+  context = {},
+  config = {}
 ) =>
   class DirectiveVisitor extends SchemaDirectiveVisitor {
-    constructor(config) {
-      super(config);
+    constructor(...args) {
+      super(...args);
       if (has(name, makeDirectives)) {
         this.directiveInstances = [
           makeDirectives[name](name, {}, { ...context, isDefault: true })
@@ -57,10 +58,18 @@ export const makeDirective = (
         name,
         locations,
         args: fromPairs(
-          params.map(({ name, type: { defaultValue, getType } }) => [
-            name,
-            { defaultValue, type: getType(schema) }
-          ])
+          params
+            .map(({ name, type: { defaultValue, getType, getTypeName } }) => [
+              name,
+              {
+                defaultValue,
+                type: getType(
+                  schema,
+                  getTypeName ? getTypeName(config) : undefined
+                )
+              }
+            ])
+            .filter(([, { type }]) => Boolean(type))
         )
       });
     }

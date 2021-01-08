@@ -1551,16 +1551,13 @@ export const customQuery = ({
     authzPredicates
   });
 
-  const matchMe = cypherParams?.me?.uuid
-    ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me ';
   const unwindClause =
-    cypherParams?.me?.uuid && filter
+    context.hasCredentials && filter
       ? `UNWIND [y in x WHERE ${filter} | y]`
       : 'UNWIND x';
   const { env, varNames } = getEnv({ context, resolveInfo });
 
-  const query = `${matchMe}${env}${apocShield(
+  const query = `${context.matchMe || ''}${env}${apocShield(
     `WITH ${varNames.join(
       ', '
     )}, apoc.cypher.runFirstColumn("WITH ${varNames
@@ -1698,14 +1695,12 @@ export const nodeQuery = ({
     .filter(predicate => !!predicate)
     .join(' AND ');
 
-  const matchMe = cypherParams?.me?.uuid
-    ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me ';
   const { env, varNames } = getEnv({ context, resolveInfo });
   const predicate = predicateClauses ? `WHERE ${predicateClauses} ` : '';
   const { optimization, cypherPart: orderByClause } = orderByValue;
 
-  let query = `${matchMe}${env}MATCH (${safeVariableName}:${safeLabelName}${
+  let query = `${context.matchMe ||
+    ''}${env}MATCH (${safeVariableName}:${safeLabelName}${
     argString ? ` ${argString}` : ''
   }) ${predicate}${
     optimization.earlyOrderBy ? `WITH ${safeVariableName}${orderByClause}` : ''
@@ -1860,16 +1855,13 @@ export const customMutation = ({
     authzPredicates
   });
 
-  const matchMe = cypherParams?.me?.uuid
-    ? `MATCH (me: User { uuid: $cypherParams.me.uuid }) `
-    : 'WITH NULL AS me ';
   const { env, varNames } = getEnv({ context, resolveInfo });
   // TODO(tlowerison): Implement node filter for custom mutations (might be connected to `listVariable`)
-  // const unwindClause = cypherParams?.me?.uuid && filter ? `UNWIND [y in x WHERE ${filter} | y]` : 'UNWIND x';
+  // const unwindClause = context.hasCredentials && filter ? `UNWIND [y in x WHERE ${filter} | y]` : 'UNWIND x';
 
   let query = '';
   if (labelPredicate) {
-    query = `${matchMe}${env}${apocDoShield(
+    query = `${context.matchMe || ''}${env}${apocDoShield(
       `WITH ${varNames.join(', ')} CALL apoc.cypher.doIt("${
         cypherQueryArg.value.value
       }", ${toArgString(argString, {
@@ -1885,7 +1877,7 @@ export const customMutation = ({
       argString
     )}`;
   } else {
-    query = `${matchMe}${env}${apocDoShield(
+    query = `${context.matchMe || ''}${env}${apocDoShield(
       `WITH ${varNames.join(', ')} CALL apoc.cypher.doIt("${
         cypherQueryArg.value.value
       }", ${toArgString(argString, {

@@ -69,7 +69,8 @@ export const mungeTypeDefs = config => {
                 getDirectiveInputs(
                   matchValue,
                   name,
-                  directives[name].customParams
+                  directives[name].customParams,
+                  config
                 ).map(({ value }) => value)
               )
             )
@@ -122,17 +123,26 @@ export const mungeTypeDefs = config => {
 
   return {
     authDirectives,
-    typeDefs: `${toPairs(authDirectives)
+    typeDefs: `${slices.join('')}\n\n${toPairs(authDirectives)
       .map(
-        ([name, { locations, params = [] }]) =>
-          `directive @${name}${
+        ([directiveName, { locations, params = [] }]) =>
+          `directive @${directiveName}${
             params.length > 0
               ? `(${params
-                  .map(({ name, type }) => `${name}: ${type.value}`)
+                  .map(({ name, type }) => {
+                    const { getTypeDef, getTypeName } =
+                      directives[directiveName]?.params?.find(
+                        param => param.name === name
+                      )?.type || {};
+                    if (getTypeDef && getTypeName) {
+                      return `${name}: ${getTypeDef(getTypeName(config))}`;
+                    }
+                    return `${name}: ${type.value}`;
+                  })
                   .join(', ')})`
               : ''
           } on ${locations.join(' | ')}`
       )
-      .join('\n')}\n\n${slices.join('')}`
+      .join('\n')}`
   };
 };
