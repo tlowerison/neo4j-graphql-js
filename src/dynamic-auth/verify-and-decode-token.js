@@ -1,4 +1,4 @@
-import { AuthorizationError } from './errors';
+import { AuthorizationError } from './authorization-error';
 import { createError } from 'apollo-errors';
 import { decode, verify } from 'jsonwebtoken';
 

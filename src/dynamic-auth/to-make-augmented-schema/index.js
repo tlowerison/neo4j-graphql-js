@@ -8,15 +8,15 @@ export * from './constants';
 export const toMakeAugmentedSchema = (
   makeBasicAugmentedSchema,
   neo4jgraphql
-) => config => {
-  if (!config?.config?.auth) {
-    return makeBasicAugmentedSchema(config);
+) => options => {
+  if (!options?.config?.auth) {
+    return makeBasicAugmentedSchema(options);
   }
-  const { authDirectives, typeDefs } = mungeTypeDefs(config);
-  const Query = { ...(config.resolvers?.Query || {}) };
-  const Mutation = { ...(config.resolvers?.Mutation || {}) };
+  const { authDirectives, typeDefs } = mungeTypeDefs(options);
+  const Query = { ...(options.resolvers?.Query || {}) };
+  const Mutation = { ...(options.resolvers?.Mutation || {}) };
   const tempSchema = makeBasicAugmentedSchema({
-    ...config,
+    ...options,
     typeDefs,
     schemaDirectives: {
       ...mapObjIndexed(
@@ -25,44 +25,48 @@ export const toMakeAugmentedSchema = (
             authDirective,
             name,
             { authorizations, environments },
-            config.config
+            options.config
           ),
         authDirectives
       ),
-      ...config.schemaDirectives
+      ...options.schemaDirectives
     }
   });
   const resolvers = {
-    ...config.resolvers,
+    ...options.resolvers,
     Query: {
-      ...(config?.config?.query === false
+      ...(options.config?.query === false
         ? fromPairs(
             keys(tempSchema.getQueryType()?.getFields() || {})
               .filter(key => !has(key, Query))
               .map(key => [key, neo4jgraphql])
           )
-        : config.resolvers?.Query),
+        : options.resolvers?.Query),
       ...Query
     },
     Mutation: {
-      ...(config?.config?.mutation === false
+      ...(options.config?.mutation === false
         ? fromPairs(
             keys(tempSchema.getMutationType()?.getFields() || {})
               .filter(key => !has(key, Mutation))
               .map(key => [key, neo4jgraphql])
           )
-        : config.resolvers?.Mutation),
+        : options.resolvers?.Mutation),
       ...Mutation
     }
   };
   return makeBasicAugmentedSchema({
-    ...config,
+    ...options,
     resolvers,
     typeDefs,
-    config: omit(['auth'], config.config || {}),
+    config: omit(['auth'], options.config || {}),
     schemaDirectives: {
-      ...mapObjIndexed(makeDirective, authDirectives),
-      ...config.schemaDirectives
+      ...mapObjIndexed(
+        (authDirective, name) =>
+          makeDirective(authDirective, name, {}, options.config),
+        authDirectives
+      ),
+      ...options.schemaDirectives
     }
   });
 };

@@ -1,10 +1,10 @@
+import { AuthorizationError } from '../authorization-error';
 import {
   DirectiveLocation,
   GraphQLEnumType,
   GraphQLList,
   GraphQLString
 } from 'graphql';
-import { createError } from 'apollo-errors';
 import { equals, has, intersection, values } from 'ramda';
 import { print } from 'graphql';
 import { typeIdentifiers } from '../../utils';
@@ -43,7 +43,7 @@ export const AUTHORIZATION_DIRECTIVE = {
           return new GraphQLList(RoleType);
         },
         getTypeDef: (typeName = 'Role') => `[${typeName}!]`,
-        getTypeName: config => config?.config?.auth?.roleType
+        getTypeName: options => options?.config?.auth?.roleType
       },
       wrappers: [{ left: '[', right: ']' }]
     },
@@ -63,7 +63,7 @@ export const AUTHORIZATION_DIRECTIVE = {
           return new GraphQLList(ScopeType);
         },
         getTypeDef: (typeName = 'Scope') => `[${typeName}!]`,
-        getTypeName: config => config?.config?.auth?.scopeType
+        getTypeName: options => options?.config?.auth?.scopeType
       },
       wrappers: [{ left: '[', right: ']' }]
     },
@@ -91,10 +91,6 @@ export const AUTHORIZATION_DIRECTIVE = {
     }
   ]
 };
-
-const AuthorizationError = createError('AuthorizationError', {
-  message: 'You are not authorized.'
-});
 
 export const makeAuthorizationDirective = (
   name,

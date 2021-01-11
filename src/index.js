@@ -25,8 +25,13 @@ import { buildDocument } from './augment/ast';
 import { augmentDirectiveDefinitions } from './augment/directives';
 import { isFederatedOperation, executeFederatedOperation } from './federation';
 import { schemaAssert } from './schemaAssert';
-import { toMakeAugmentedSchema } from './dynamic-auth';
+
+import callsite from 'callsite';
+import { dirname, join } from 'path';
 import { identity } from 'ramda';
+import { readFileSync } from 'fs';
+import { sync } from 'glob';
+import { toMakeAugmentedSchema } from './dynamic-auth';
 
 export * from './dynamic-auth';
 
@@ -348,26 +353,27 @@ export const makeAugmentedSchema = toMakeAugmentedSchema(
   neo4jgraphql
 );
 
-export const wrapNeo4jgraphql = fn => async (
-  parent,
-  params,
+export const readFiles = pattern =>
+  sync(join(dirname(callsite()[1].getFileName()), pattern))
+    .map(filename => readFileSync(filename, 'utf-8'))
+    .join('\n');
+
+export const wrapNeo4jgraphql = transformArgs => async (
+  source,
+  args,
   context,
-  resolveInfo
+  info,
+  debugFlag
 ) => {
   const {
-    debugFlag = false,
+    source: newSource = source,
+    args: newArgs = args,
     context: newContext = context,
-    params: newParams = params,
-    parent: newParent = parent,
-    resolveInfo: newResolveInfo = resolveInfo,
-    toResult = identity
-  } = await fn({ parent, params, context, resolveInfo });
-  const res = await neo4jgraphql(
-    newParent,
-    newParams,
-    newContext,
-    newResolveInfo,
-    debugFlag
+    info: newInfo = info,
+    debugFlag: newDebugFlag = debugFlag,
+    result = identity
+  } = await transformArgs({ source, args, context, info, debugFlag });
+  return result(
+    await neo4jgraphql(newSource, newArgs, newContext, newInfo, newDebugFlag)
   );
-  return toResult(res);
 };

@@ -1,4 +1,4 @@
-import { identity } from 'ramda';
+import { fromPairs, identity } from 'ramda';
 import { verifyAndDecodeToken } from './verify-and-decode-token';
 
 export const authorizations = {};
@@ -52,16 +52,35 @@ export const buildContext = (driver, config) => {
     let tx;
     const getNeo4jSession = () =>
       neo4jSession ? neo4jSession : (neo4jSession = driver.session());
+    const getTx = () => (tx ? tx : getNeo4jSession().beginTransaction());
+    const cypherParams = { _credentials: credentials || {} };
     return {
       authorizations,
-      environments,
+      cypherParams,
       driver,
+      environments,
       getNeo4jSession,
+      getTx,
       req,
       closeNeo4jSession: () => neo4jSession && neo4jSession.close(),
-      cypherParams: { _credentials: credentials || {} },
-      getTx: () => (tx ? tx : getNeo4jSession().beginTransaction()),
+      getMe: async () => {
+        const tx = await getTx();
+        const result = await tx.run(matchMe, { cypherParams });
+        return (
+          (result.records.length === 1 && result.records[0].get('me')) || null
+        );
+      },
       hasCredentials: Boolean(credentials),
+      query: async (req, params, columns) => {
+        const tx = await getTx();
+        const result = await tx.run(req, params);
+        if (!columns) {
+          return result;
+        }
+        return result.records.map(record =>
+          fromPairs(columns.map(column => [column, record.get(column)]))
+        );
+      },
       matchMe: credentials ? matchMe : nullMatchMe,
       session: req.session
     };

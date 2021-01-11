@@ -33,7 +33,7 @@ export const makeDirective = (
   { instances, locations, params },
   name,
   context = {},
-  config = {}
+  options = {}
 ) =>
   class DirectiveVisitor extends SchemaDirectiveVisitor {
     constructor(...args) {
@@ -65,7 +65,7 @@ export const makeDirective = (
                 defaultValue,
                 type: getType(
                   schema,
-                  getTypeName ? getTypeName(config) : undefined
+                  getTypeName ? getTypeName(options) : undefined
                 )
               }
             ])

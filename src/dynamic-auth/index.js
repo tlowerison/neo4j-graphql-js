@@ -1,5 +1,5 @@
+export * from './authorization-error';
 export * from './build-context';
-export * from './errors';
 export * from './get-authz-predicates';
 export * from './get-env';
 export * from './make-directive';
