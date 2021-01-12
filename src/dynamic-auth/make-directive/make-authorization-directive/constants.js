@@ -74,7 +74,7 @@ export const AUTHORIZATION_DIRECTIVE = {
     {
       name: 'filter',
       type: {
-        defaultValue: 'items',
+        defaultValue: null,
         getType: () => GraphQLString,
         getTypeDef: () => 'String',
         getTypeName: () => 'String'

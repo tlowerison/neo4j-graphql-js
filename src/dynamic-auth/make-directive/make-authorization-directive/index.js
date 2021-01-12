@@ -20,7 +20,7 @@ export const makeAuthorizationDirective = (
     const { name: fieldName, resolve } = field;
     const { typeName } = typeIdentifiers(field.type);
     const error = (args.error || this.args.error).trim();
-    const filter = (args.filter || this.args.filter).trim();
+    const filter = (args.filter || this.args.filter)?.trim();
     const shield = (args.shield || this.args.shield).trim();
 
     const isDefaultFilter = getIsDefaultFilter(filter);
@@ -41,7 +41,7 @@ export const makeAuthorizationDirective = (
         authorizations[typeName].fields[fieldName][parentName] = [];
       }
       if (!isDefaultFilter) {
-        authorization.filter = toAuthorization(filter, 'items');
+        authorization.filter = toAuthorization(filter, 'item');
       }
       if (!isDefaultShield) {
         authorization.error = error;

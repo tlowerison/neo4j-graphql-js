@@ -121,7 +121,7 @@ export const customCypherField = ({
     schemaType,
     variableName
   });
-  const { filter, shield } = authzPredicates;
+  const { shield } = authzPredicates;
   const [mapProjection, labelPredicate] = buildMapProjection({
     isComputedField: true,
     schemaType: innerSchemaType,

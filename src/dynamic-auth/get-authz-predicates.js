@@ -66,6 +66,7 @@ const getRawAuthzPredicates = ({
   const authzFieldPredicate = getAuthzFieldPredicate({
     authorizations,
     fieldName,
+    nodeVariableName,
     schemaType,
     typeNames,
     variableName
@@ -73,23 +74,39 @@ const getRawAuthzPredicates = ({
   const authzNodePredicate = variableName
     ? getAuthzNodePredicate({
         authorizations,
-        typeNames,
-        variableName: nodeVariableName
+        nodeVariableName,
+        typeNames
       })
     : null;
+  console.log({
+    filter: [authzNodePredicate, authzFieldPredicate.filter]
+      .filter(Boolean)
+      .join(' AND '),
+    shield: authzFieldPredicate.shield
+  });
   return {
-    filter: authzNodePredicate,
-    shield: authzFieldPredicate
+    filter: [authzNodePredicate, authzFieldPredicate.filter]
+      .filter(Boolean)
+      .join(' AND '),
+    shield: authzFieldPredicate.shield
   };
 };
 
 const getAuthzFieldPredicate = ({
   authorizations,
   fieldName,
+  nodeVariableName,
   schemaType,
   typeNames,
   variableName
 }) => {
+  console.log({
+    fieldName,
+    nodeVariableName,
+    schemaType,
+    typeNames,
+    variableName
+  });
   const fieldAuthorizations = flatten(
     typeNames.map(typeName => {
       const { fields } = authorizations[typeName];
@@ -98,23 +115,49 @@ const getAuthzFieldPredicate = ({
         : [];
     })
   );
+  console.log(fieldAuthorizations);
   if (fieldAuthorizations.length === 0) {
-    return null;
+    return { filter: null, shield: null };
   }
-  return `[${fieldAuthorizations
-    .map(
-      ({ error, name, shield }) =>
-        `{shield: ${shield(variableName)}, name: '${name}', error: '${error}'}`
-    )
-    .join(', ')}]`;
+  const filterFieldAuthorizations = fieldAuthorizations.filter(({ filter }) =>
+    Boolean(filter)
+  );
+  const shieldFieldAuthorizations = fieldAuthorizations.filter(({ shield }) =>
+    Boolean(shield)
+  );
+  return {
+    filter:
+      filterFieldAuthorizations.length > 0
+        ? filterFieldAuthorizations
+            .map(({ filter }) => filter(nodeVariableName))
+            .join(' AND ')
+        : null,
+    shield:
+      shieldFieldAuthorizations.length > 0
+        ? `[${shieldFieldAuthorizations
+            .map(
+              ({ error, name, shield }) =>
+                `{shield: ${shield(
+                  variableName
+                )}, name: '${name}', error: '${error}'}`
+            )
+            .join(', ')}]`
+        : null
+  };
 };
 
-const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
+const getAuthzNodePredicate = ({
+  authorizations,
+  nodeVariableName,
+  typeNames
+}) => {
   const nodeAuthorizations = flatten(
     typeNames.map(typeName => authorizations[typeName].node || [])
   );
   return nodeAuthorizations.length > 0
-    ? nodeAuthorizations.map(({ shield }) => shield(variableName)).join(' AND ')
+    ? nodeAuthorizations
+        .map(({ shield }) => shield(nodeVariableName))
+        .join(' AND ')
     : null;
 };
 

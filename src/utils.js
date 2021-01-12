@@ -66,16 +66,20 @@ export function extractQueryResult({ records }, returnType) {
   let result = null;
   if (isArrayType(returnType)) {
     const errors = flatten(
-      records.map(record => handleErrors(record.get('_errors')))
+      records
+        .filter(record => record.has('_errors'))
+        .map(record => handleErrors(record.get('_errors')))
     );
     if (errors.length > 0) {
       throwDynamicAuthError(errors);
     }
     result = records.map(record => record.get(variableName));
   } else if (records.length) {
-    const errors = handleErrors(records[0].get('_errors'));
-    if (errors.length > 0) {
-      throwDynamicAuthError(errors);
+    if (records[0].has('_errors')) {
+      const errors = handleErrors(records[0].get('_errors'));
+      if (errors.length > 0) {
+        throwDynamicAuthError(errors);
+      }
     }
     // could be object or scalar
     result = records[0].get(variableName);

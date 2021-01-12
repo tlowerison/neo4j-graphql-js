@@ -12,7 +12,7 @@ export const getIsDefaultShield = shield =>
   shield === getParam('shield')?.type.defaultValue;
 
 export const toAuthorization = (statement, alias) => variableName =>
-  `(${statement.replace(new RegExp(alias, 'g'), variableName)})`;
+  `${statement.replace(new RegExp(alias, 'g'), variableName)}`;
 
 export const saveNodeAuthorization = ({
   authorizations,

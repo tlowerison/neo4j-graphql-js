@@ -32,6 +32,7 @@ export const toMakeAugmentedSchema = (
       ...options.schemaDirectives
     }
   });
+  // console.log(authorizations?.Boolean?.fields?.stuff?.User[0].filter("foo fah fee"));
   const resolvers = {
     ...options.resolvers,
     Query: {
