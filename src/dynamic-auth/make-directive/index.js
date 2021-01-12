@@ -34,18 +34,19 @@ export const makeDirective = (
   name,
   context = {},
   options = {}
-) =>
-  class DirectiveVisitor extends SchemaDirectiveVisitor {
+) => {
+  return class DirectiveVisitor extends SchemaDirectiveVisitor {
     constructor(...args) {
       super(...args);
+      const baseName = name.split('_N')[0];
       if (has(name, makeDirectives)) {
         this.directiveInstances = [
-          makeDirectives[name](name, {}, { ...context, isDefault: true })
+          makeDirectives[name](baseName, {}, { ...context, isDefault: true })
         ];
       } else {
         this.directiveInstances = instances.map(
           ({ name: directiveName, args }) =>
-            makeDirectives[directiveName](name, args, context)
+            makeDirectives[directiveName](baseName, args, context)
         );
       }
       this.directiveInstances = this.directiveInstances.map(directiveInstance =>
@@ -110,3 +111,4 @@ export const makeDirective = (
       }
     }
   };
+};

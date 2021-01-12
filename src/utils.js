@@ -8,8 +8,13 @@ import {
 import { getFederatedOperationData } from './federation';
 import neo4j from 'neo4j-driver';
 import _ from 'lodash';
-import { fromPairs } from 'ramda';
+
+import { flatten, fromPairs } from 'ramda';
 import { isNonNullType } from 'graphql';
+import {
+  handleErrors,
+  throwDynamicAuthError
+} from './dynamic-auth/handle-errors';
 
 function parseArg(arg, variableValues) {
   switch (arg.value.kind) {
@@ -60,8 +65,18 @@ export function extractQueryResult({ records }, returnType) {
   const { variableName } = typeIdentifiers(returnType);
   let result = null;
   if (isArrayType(returnType)) {
+    const errors = flatten(
+      records.map(record => handleErrors(record.get('_errors')))
+    );
+    if (errors.length > 0) {
+      throwDynamicAuthError(errors);
+    }
     result = records.map(record => record.get(variableName));
   } else if (records.length) {
+    const errors = handleErrors(records[0].get('_errors'));
+    if (errors.length > 0) {
+      throwDynamicAuthError(errors);
+    }
     // could be object or scalar
     result = records[0].get(variableName);
     result = Array.isArray(result) ? result[0] : result;

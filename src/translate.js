@@ -1534,7 +1534,7 @@ export const customQuery = ({
     typeNames: [typeIdentifiers(resolveInfo.returnType).typeName],
     variableName: safeVariableName
   });
-  const { apocShield, filter } = authzPredicates;
+  const { customQueryShield, filter } = authzPredicates;
   let [mapProjection, labelPredicate] = buildMapProjection({
     isComputedQuery: true,
     schemaType,
@@ -1557,20 +1557,21 @@ export const customQuery = ({
       : 'UNWIND x';
   const { env, varNames } = getEnv({ context, resolveInfo });
 
-  const query = `${context.matchMe || ''}${env}${apocShield(
+  const query = `${context.matchMe || ''}${env}${customQueryShield(
     `WITH ${varNames.join(
       ', '
     )}, apoc.cypher.runFirstColumn("WITH ${varNames
       .map(varName => `$${varName} AS ${varName}`)
       .join(', ')} ${cypherQueryArg.value.value}", ${toArgString(argString, {
       varNames,
-      inProcedure: apocShield !== identity
+      inProcedure: customQueryShield !== identity
     })}, True) AS x ${labelPredicate}${unwindClause} AS ${safeVariableName} RETURN ${
       isScalarPayload
         ? `${mapProjection} `
         : `${mapProjection} AS ${safeVariableName}${orderByClause}`
     }${outerSkipLimit}`,
-    argString
+    argString,
+    varNames
   )}`;
 
   return [query, { ...params, ...fragmentTypeParams }];
@@ -1838,7 +1839,7 @@ export const customMutation = ({
     typeNames: [typeIdentifiers(resolveInfo.returnType).typeName],
     variableName: safeVariableName
   });
-  const { apocDoShield, filter } = authzPredicates;
+  const { customMutationShield, filter } = authzPredicates;
   const [mapProjection, labelPredicate] = buildMapProjection({
     isComputedMutation: true,
     listVariable,
@@ -1861,12 +1862,12 @@ export const customMutation = ({
 
   let query = '';
   if (labelPredicate) {
-    query = `${context.matchMe || ''}${env}${apocDoShield(
+    query = `${context.matchMe || ''}${env}${customMutationShield(
       `WITH ${varNames.join(', ')} CALL apoc.cypher.doIt("${
         cypherQueryArg.value.value
       }", ${toArgString(argString, {
         varNames,
-        inProcedure: apocDoShield !== identity
+        inProcedure: customMutationShield !== identity
       })}) YIELD value
       ${!isScalarField ? labelPredicate : ''}AS ${safeVariableName}
       RETURN ${
@@ -1874,15 +1875,16 @@ export const customMutation = ({
           ? `${mapProjection} AS ${safeVariableName}${orderByClause}${outerSkipLimit}`
           : ''
       }`,
-      argString
+      argString,
+      varNames
     )}`;
   } else {
-    query = `${context.matchMe || ''}${env}${apocDoShield(
+    query = `${context.matchMe || ''}${env}${customMutationShield(
       `WITH ${varNames.join(', ')} CALL apoc.cypher.doIt("${
         cypherQueryArg.value.value
       }", ${toArgString(argString, {
         varNames,
-        inProcedure: apocDoShield !== identity
+        inProcedure: customMutationShield !== identity
       })}) YIELD value
       WITH ${varNames.join(', ')}, ${listVariable}AS ${safeVariableName}
       RETURN ${safeVariableName} ${
@@ -1894,7 +1896,8 @@ export const customMutation = ({
             }${subQuery}} AS ${safeVariableName}${orderByClause}${outerSkipLimit}`
           : ''
       }`,
-      argString
+      argString,
+      varNames
     )}`;
   }
   const fragmentTypeParams = derivedTypesParams({

@@ -16,7 +16,7 @@
     "build": "babel src --presets @babel/preset-env --out-dir dist && rsync -zarv --prune-empty-dirs --include='*/' --include='*.d.ts' --exclude='*' src/ dist",
     "build-with-sourcemaps": "babel src --presets @babel/preset-env --out-dir dist --source-maps",
     "precommit": "lint-staged",
-    "prepare": "npm run build",
+    "prepare": "rm -rf dist; npm run build",
     "test": "nyc --reporter=lcov ava test/unit/augmentSchemaTest.test.js test/unit/configTest.test.js test/unit/assertSchema.test.js test/unit/cypherTest.test.js test/unit/filterTest.test.js test/unit/filterTests.test.js test/unit/experimental/augmentSchemaTest.test.js test/unit/experimental/cypherTest.test.js",
     "parse-tck": "babel-node test/helpers/tck/parseTck.js",
     "test-tck": "nyc ava --fail-fast test/unit/filterTests.test.js",

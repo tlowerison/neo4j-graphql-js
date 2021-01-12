@@ -39,13 +39,8 @@ const neo4jGraphQLVersion = require('../package.json').version;
 
 const debug = Debug('neo4j-graphql-js');
 
-export async function neo4jgraphql(
-  object,
-  params,
-  context,
-  resolveInfo,
-  debugFlag
-) {
+export async function neo4jgraphql(object, params, context, resolveInfo) {
+  const debugFlag = true;
   if (isFederatedOperation({ resolveInfo })) {
     return await executeFederatedOperation({
       object,
@@ -315,7 +310,7 @@ export const assertSchema = ({
   });
 };
 
-const makeBasicAugmentedSchema = ({
+const baseMakeAugmentedSchema = ({
   schema,
   typeDefs,
   resolvers = {},
@@ -349,7 +344,7 @@ const makeBasicAugmentedSchema = ({
 };
 
 export const makeAugmentedSchema = toMakeAugmentedSchema(
-  makeBasicAugmentedSchema,
+  baseMakeAugmentedSchema,
   neo4jgraphql
 );
 

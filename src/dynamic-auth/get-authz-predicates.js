@@ -5,37 +5,36 @@ import { isListType } from 'graphql';
 import { toArgString } from './to-arg-string';
 
 export const getAuthzPredicates = config => {
-  const { authzFieldPredicate, filter, shield } = getRawAuthzPredicates(config);
-  const { varNames } = getEnv(config);
+  const { filter, shield } = getRawAuthzPredicates(config);
   return {
     filter,
-    apocDoShield: authzFieldPredicate
-      ? (value, argString) =>
-          `CALL apoc.do.when(${authzFieldPredicate}, "${replaceQuotes(
-            value
-          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
-            argString,
-            { inProcedure: false, varNames }
-          )}) YIELD value RETURN value.${config.variableName} AS ${
-            config.variableName
-          }`
-      : identity,
-    apocShield: authzFieldPredicate
-      ? (value, argString) =>
-          `CALL apoc.when(${authzFieldPredicate}, "${replaceQuotes(
-            value
-          )}", "RETURN NULL AS ${config.variableName}", ${toArgString(
-            argString,
-            { inProcedure: false, varNames }
-          )}) YIELD value RETURN value.${config.variableName} AS ${
-            config.variableName
-          }`
-      : identity,
-    shield: shield
-      ? value => `CASE WHEN (${shield}) THEN ${value} ELSE NULL END`
-      : identity
+    customMutationShield: !shield
+      ? identity
+      : getCustomOperationShield(shield, config.variableName, true),
+    customQueryShield: !shield
+      ? identity
+      : getCustomOperationShield(shield, config.variableName, false),
+    shield: !shield
+      ? identity
+      : value => `CASE WHEN (${shield}) THEN ${value} ELSE NULL END`
   };
 };
+
+const getCustomOperationShield = (shield, variableName, isMutation) => (
+  value,
+  argString,
+  varNames
+) =>
+  `\nWITH${
+    varNames.length > 0 ? ` ${varNames.join(', ')},` : ''
+  } [x IN ${shield} WHERE NOT x.shield | x { .name, .error }] AS _errors\nCALL apoc${
+    isMutation ? '.do' : ''
+  }.when(size(_errors) = 0, "${replaceQuotes(
+    value
+  )}", "RETURN _errors", ${toArgString(argString, {
+    inProcedure: false,
+    varNames: [...varNames, '_errors']
+  })}) YIELD value RETURN value.${variableName} AS ${variableName}, value._errors AS _errors`;
 
 const getRawAuthzPredicates = ({
   context: { authorizations },
@@ -79,9 +78,8 @@ const getRawAuthzPredicates = ({
       })
     : null;
   return {
-    authzFieldPredicate: authzFieldPredicate?.shield || null,
     filter: authzNodePredicate,
-    shield: authzFieldPredicate?.shield || null
+    shield: authzFieldPredicate
   };
 };
 
@@ -103,11 +101,12 @@ const getAuthzFieldPredicate = ({
   if (fieldAuthorizations.length === 0) {
     return null;
   }
-  return {
-    shield: fieldAuthorizations
-      .map(({ shield }) => shield(variableName))
-      .join(' AND ')
-  };
+  return `[${fieldAuthorizations
+    .map(
+      ({ error, name, shield }) =>
+        `{shield: ${shield(variableName)}, name: '${name}', error: '${error}'}`
+    )
+    .join(', ')}]`;
 };
 
 const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
@@ -115,10 +114,10 @@ const getAuthzNodePredicate = ({ authorizations, typeNames, variableName }) => {
     typeNames.map(typeName => authorizations[typeName].node || [])
   );
   return nodeAuthorizations.length > 0
-    ? nodeAuthorizations
-        .map(authorization => authorization(variableName))
-        .join(' AND ')
+    ? nodeAuthorizations.map(({ shield }) => shield(variableName)).join(' AND ')
     : null;
 };
 
 const replaceQuotes = value => value.replace(new RegExp('"', 'g'), '\\"');
+const withQuotes = value => `\`${value}\``;
+const withoutQuotes = value => value.slice(1, value.length - 1);
