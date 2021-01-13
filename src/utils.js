@@ -10,11 +10,8 @@ import neo4j from 'neo4j-driver';
 import _ from 'lodash';
 
 import { flatten, fromPairs } from 'ramda';
+import { getDynamicAuthErrors, throwDynamicAuthError } from './dynamic-auth';
 import { isNonNullType } from 'graphql';
-import {
-  handleErrors,
-  throwDynamicAuthError
-} from './dynamic-auth/handle-errors';
 
 function parseArg(arg, variableValues) {
   switch (arg.value.kind) {
@@ -68,7 +65,7 @@ export function extractQueryResult({ records }, returnType) {
     const errors = flatten(
       records
         .filter(record => record.has('_errors'))
-        .map(record => handleErrors(record.get('_errors')))
+        .map(record => getDynamicAuthErrors(record.get('_errors')))
     );
     if (errors.length > 0) {
       throwDynamicAuthError(errors);
@@ -76,7 +73,7 @@ export function extractQueryResult({ records }, returnType) {
     result = records.map(record => record.get(variableName));
   } else if (records.length) {
     if (records[0].has('_errors')) {
-      const errors = handleErrors(records[0].get('_errors'));
+      const errors = getDynamicAuthErrors(records[0].get('_errors'));
       if (errors.length > 0) {
         throwDynamicAuthError(errors);
       }

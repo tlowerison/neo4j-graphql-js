@@ -20,9 +20,9 @@ type Config = {
      */
     scopeType?: string;
     /**
-     * Should contain your authorization directive definitions placed in .auth files
+     * Contains authorization directive definitions living in .auth files
      */
-    typeDefs: string;
+    typeDefs?: string;
   };
   /**
    * Enable/disable logging of generated Cypher queries and parameters

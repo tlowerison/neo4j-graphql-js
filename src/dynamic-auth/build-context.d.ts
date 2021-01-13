@@ -69,7 +69,7 @@ export interface Context {
   session: any;
 }
 
-export declare function buildContext<T>(
+export declare function buildContext(
   driver: Driver,
   config: {
     credentials: {
@@ -86,7 +86,7 @@ export declare function buildContext<T>(
        * - all other keys will be matchedin the standard cypher object pattern
        *   - e.g. for keys: ['uuid'], `MATCH (me { uuid: $cypherParams._credentials.uuid }) ...`
        */
-      keys?: T;
+      keys?: string[];
     };
     /**
      * The node label(s) for users in your database.

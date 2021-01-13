@@ -2,6 +2,7 @@ import {
   DirectiveLocation,
   GraphQLEnumType,
   GraphQLList,
+  GraphQLNonNull,
   GraphQLString
 } from 'graphql';
 import { wrappers } from '../constants';
@@ -25,8 +26,8 @@ export const definition = {
       name: 'expression',
       type: {
         defaultValue: 'TRUE',
-        getType: () => GraphQLString,
-        getTypeDef: () => 'String',
+        getType: () => new GraphQLNonNull(GraphQLString),
+        getTypeDef: () => 'String!',
         getTypeName: () => 'String'
       },
       wrappers: wrappers.string
@@ -34,7 +35,7 @@ export const definition = {
     {
       name: 'error',
       type: {
-        defaultValue: 'Unknown error',
+        defaultValue: 'Unauthorized',
         getType: () => GraphQLString,
         getTypeDef: () => 'String',
         getTypeName: () => 'String'

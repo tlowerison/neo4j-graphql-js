@@ -18,7 +18,7 @@ export const definition = {
         defaultValue: '',
         getType: () => new GraphQLNonNull(GraphQLString),
         getTypeDef: () => 'String!',
-        getTypeName: () => 'String!'
+        getTypeName: () => 'String'
       },
       wrappers: wrappers.string
     }

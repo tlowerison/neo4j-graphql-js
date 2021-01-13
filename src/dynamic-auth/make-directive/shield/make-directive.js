@@ -40,7 +40,7 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
     const { name: typeName } = interfaceType;
     const error = (args.error || this.args.error).trim();
     const expression = (args.expression || this.args.expression).trim();
-    if (getIsDefaultExpression(expression)) {
+    if (!getIsDefaultExpression(expression)) {
       saveNodeAuthorization({
         authorizations,
         error,
@@ -54,7 +54,7 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
     const { name: typeName } = objectType;
     const error = (args.error || this.args.error).trim();
     const expression = (args.expression || this.args.expression).trim();
-    if (getIsDefaultExpression(expression)) {
+    if (!getIsDefaultExpression(expression)) {
       saveNodeAuthorization({
         authorizations,
         error,

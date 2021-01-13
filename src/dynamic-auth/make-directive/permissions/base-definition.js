@@ -12,7 +12,7 @@ const baseParam = {
     defaultValue: null,
     getType: (schema, typeName = 'Role') => {
       if (typeName === 'String') {
-        return GraphQLString;
+        return new GraphQLList(GraphQLString);
       }
       const RoleType = schema.getType(typeName);
       if (!RoleType || !(RoleType instanceof GraphQLEnumType)) {
