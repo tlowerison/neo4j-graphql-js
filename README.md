@@ -14,7 +14,7 @@ A full example project that uses `@tlowerison/neo4j-graphql-js` exists in [GRAND
 
 ## Directives
 
-#### @shield
+### @shield
 
 ```graphql
 @shield(expression: String!, error: String) on FIELD_DEFINITION | OBJECT | INTERFACE
@@ -63,13 +63,13 @@ Another basic example is shielding fields of one object based off its relation w
 ```graphql
 type User {
   uuid: ID! @id
-  username: String @shield(expression: "me = this")
+  username: String
   friends: [User] @relation(name: "KNOWS", direction: "OUT")
   birthday: String @shield(expression: "(me)-[:KNOWS]-(this)")
 }
 ```
 
-#### @filter
+### @filter
 
 ```graphql
 @filter(expression: String!) on FIELD_DEFINITION
@@ -106,14 +106,14 @@ Continuing with the social-media-esque examples, a typical feature of these plat
 ```graphql
 type User {
   uuid: ID!
-  username: String @shield(expression: "me = this")
+  username: String
   friends: [User]
     @relation(name: "KNOWS", direction: "OUT")
     @filter(expression: "(me)-[:KNOWS]-(item)")
 }
 ```
 
-#### @roles / @scopes
+### @roles / @scopes
 
 ```graphql
 @roles(any: [roleType!], all: [roleType!], none: [roleType!], notAll: [roleType!]) on FIELD_DEFINITION | OBJECT | INTERFACE
@@ -131,7 +131,69 @@ Both of these directives require exactly one of the above arguments.
 
 `roleType` / `scopeType` can either be `String` or the name of an Enum type. They can both be specified in the config passed to `makeAugmentedSchema` (see section below). `roleType` defaults to `Role` and `scopeType` defaults to `Scope`.
 
-#### @env
+###### Example
+
+The preferred way to limit access to a resource based on login status is by assigning a user role to each user and attaching it to their scope on login. (NOTE: Make sure to create the correct roles for each user on creation)
+
+```graphql
+type Role {
+  ADMIN
+  USER
+}
+
+type Scope {
+  WRITE_ME
+}
+
+type User @roles(any: [USER]) {
+  uuid: ID! @id
+  username: String
+  roles: [Role] @admin
+  ...
+}
+
+type Mutation {
+  # Would typically require email on SignUp as well as enforce validation
+  # rules on email, username and password, excluded here for brevity
+  CreateAdmin(username: String!, password: String!): User
+    @roles(any: [ADMIN])
+    @cypher(statement: """
+      CREATE (user:User {
+        uuid: apoc.create.uuid(),
+        username: $username,
+        password: $password,
+        roles: ['ADMIN', 'USER'],
+      })
+      RETURN user
+    """)
+
+  # Would typically require email on SignUp as well as enforce validation
+  # rules on email, username and password, excluded here for brevity
+  SignUp(username: String!, password: String!): User
+    @cypher(statement: """
+      CREATE (user:User {
+        uuid: apoc.create.uuid(),
+        username: $username,
+        password: $password,
+        roles: ['USER'],
+      })
+      RETURN user
+    """)
+
+  UpdateMe(username: String): User
+    @roles(any: [USER])
+    @scopes(any: [WRITE_ME])
+    @cypher(statement: """
+      SET me.username = CASE WHEN $username IS NOT NULL
+        THEN $username
+        ELSE me.username END
+    """)
+}
+```
+
+If you're using JWTs to provide credentials, make sure the tokens you produce have a `roles` field and a `scopes` field. If you're using cookies to provide credentials, make sure to attach them to the session on sign in.
+
+### @env
 
 ```graphql
 @env(provides: String!) on FIELD_DEFINITION
