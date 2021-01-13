@@ -564,7 +564,6 @@ A wrapper for ApolloError with a default message of `"Unauthorized"`.
 
 ```ts
 import { AuthorizationError } from '@tlowerison/neo4j-graphql-js';
-
 throw new AuthorizationError({ message: 'Cannot access this resource' });
 ```
 
