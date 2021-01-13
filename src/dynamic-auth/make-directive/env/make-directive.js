@@ -1,8 +1,6 @@
 import { has } from 'ramda';
 
-export * from './constants';
-
-export const makeEnvironmentDirective = (
+export const makeDirective = (
   name,
   args,
   { environments = {}, isDefault = false }

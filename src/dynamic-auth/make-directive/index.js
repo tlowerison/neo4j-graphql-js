@@ -1,29 +1,26 @@
-import {
-  AUTHORIZATION_DIRECTIVE,
-  AUTHORIZATION_NAME,
-  makeAuthorizationDirective
-} from './make-authorization-directive';
-import {
-  ENVIRONMENT_DIRECTIVE,
-  ENVIRONMENT_NAME,
-  makeEnvironmentDirective
-} from './make-environment-directive';
 import { GraphQLDirective } from 'graphql';
-
 import { SchemaDirectiveVisitor } from 'apollo-server-express';
 import { fromPairs, has, map } from 'ramda';
+import * as env from './env';
+import * as filter from './filter';
+import * as roles from './permissions/roles';
+import * as scopes from './permissions/scopes';
+import * as shield from './shield';
 
-export * from './make-authorization-directive';
-export * from './make-environment-directive';
-
-export const directives = {
-  [AUTHORIZATION_NAME]: AUTHORIZATION_DIRECTIVE,
-  [ENVIRONMENT_NAME]: ENVIRONMENT_DIRECTIVE
+export const directiveDefinitions = {
+  [env.definition.name]: env.definition,
+  [filter.definition.name]: filter.definition,
+  [roles.definition.name]: roles.definition,
+  [scopes.definition.name]: scopes.definition,
+  [shield.definition.name]: shield.definition
 };
 
-const makeDirectives = {
-  [AUTHORIZATION_NAME]: makeAuthorizationDirective,
-  [ENVIRONMENT_NAME]: makeEnvironmentDirective
+export const makeDirectives = {
+  [env.definition.name]: env.makeDirective,
+  [filter.definition.name]: filter.makeDirective,
+  [roles.definition.name]: roles.makeDirective,
+  [scopes.definition.name]: scopes.makeDirective,
+  [shield.definition.name]: shield.makeDirective
 };
 
 const bindDirectiveInstance = (directiveInstance, THIS) =>
@@ -41,12 +38,22 @@ export const makeDirective = (
       const baseName = name.split('_N')[0];
       if (has(name, makeDirectives)) {
         this.directiveInstances = [
-          makeDirectives[name](baseName, {}, { ...context, isDefault: true })
+          makeDirectives[name](
+            baseName,
+            {},
+            { ...context, isDefault: true },
+            directiveDefinitions[name]
+          )
         ];
       } else {
         this.directiveInstances = instances.map(
           ({ name: directiveName, args }) =>
-            makeDirectives[directiveName](baseName, args, context)
+            makeDirectives[directiveName](
+              baseName,
+              args,
+              context,
+              directiveDefinitions[directiveName]
+            )
         );
       }
       this.directiveInstances = this.directiveInstances.map(directiveInstance =>

@@ -50,10 +50,6 @@ export interface Context {
    */
   getTx: () => Promise<Transaction>;
   /**
-   * Indicates whether the current requestor is authenticated
-   */
-  hasCredentials: boolean;
-  /**
    * Run an arbitrary Cypher query using the current open transaction for this request
    * - if `columns` is provided, will
    */

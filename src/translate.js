@@ -1551,10 +1551,9 @@ export const customQuery = ({
     authzPredicates
   });
 
-  const unwindClause =
-    context.hasCredentials && filter
-      ? `UNWIND [y in x WHERE ${filter} | y]`
-      : 'UNWIND x';
+  const unwindClause = filter
+    ? `UNWIND [y in x WHERE ${filter} | y]`
+    : 'UNWIND x';
   const { env, varNames } = getEnv({ context, resolveInfo });
 
   const query = `${context.matchMe || ''}${env}${customQueryShield(
@@ -1858,7 +1857,7 @@ export const customMutation = ({
 
   const { env, varNames } = getEnv({ context, resolveInfo });
   // TODO(tlowerison): Implement node filter for custom mutations (might be connected to `listVariable`)
-  // const unwindClause = context.hasCredentials && filter ? `UNWIND [y in x WHERE ${filter} | y]` : 'UNWIND x';
+  // const unwindClause = filter ? `UNWIND [y in x WHERE ${filter} | y]` : 'UNWIND x';
 
   let query = '';
   if (labelPredicate) {

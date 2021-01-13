@@ -1,9 +1,9 @@
-import { fromPairs, identity } from 'ramda';
+import { fromPairs, has, identity } from 'ramda';
 import { verifyAndDecodeToken } from './verify-and-decode-token';
 
 export const authorizations = {};
 export const environments = {};
-const nullMatchMe = 'WITH me AS NULL ';
+const nullMatchMe = 'WITH NULL AS me ';
 
 export const buildContext = (driver, config) => {
   let {
@@ -70,7 +70,6 @@ export const buildContext = (driver, config) => {
           (result.records.length === 1 && result.records[0].get('me')) || null
         );
       },
-      hasCredentials: Boolean(credentials),
       query: async (req, params, columns) => {
         const tx = await getTx();
         const result = await tx.run(req, params);
@@ -81,7 +80,11 @@ export const buildContext = (driver, config) => {
           fromPairs(columns.map(column => [column, record.get(column)]))
         );
       },
-      matchMe: credentials ? matchMe : nullMatchMe,
+      matchMe:
+        credentials &&
+        credentialKeys.every(credentialKey => has(credentialKey, credentials))
+          ? matchMe
+          : nullMatchMe,
       session: req.session
     };
   };

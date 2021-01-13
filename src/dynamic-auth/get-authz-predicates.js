@@ -78,16 +78,11 @@ const getRawAuthzPredicates = ({
         typeNames
       })
     : null;
-  console.log({
-    filter: [authzNodePredicate, authzFieldPredicate.filter]
-      .filter(Boolean)
-      .join(' AND '),
-    shield: authzFieldPredicate.shield
-  });
+  const filter = [authzNodePredicate, authzFieldPredicate.filter]
+    .filter(Boolean)
+    .join(' AND ');
   return {
-    filter: [authzNodePredicate, authzFieldPredicate.filter]
-      .filter(Boolean)
-      .join(' AND '),
+    filter: filter !== '' ? filter : null,
     shield: authzFieldPredicate.shield
   };
 };
@@ -100,13 +95,6 @@ const getAuthzFieldPredicate = ({
   typeNames,
   variableName
 }) => {
-  console.log({
-    fieldName,
-    nodeVariableName,
-    schemaType,
-    typeNames,
-    variableName
-  });
   const fieldAuthorizations = flatten(
     typeNames.map(typeName => {
       const { fields } = authorizations[typeName];
@@ -115,7 +103,6 @@ const getAuthzFieldPredicate = ({
         : [];
     })
   );
-  console.log(fieldAuthorizations);
   if (fieldAuthorizations.length === 0) {
     return { filter: null, shield: null };
   }

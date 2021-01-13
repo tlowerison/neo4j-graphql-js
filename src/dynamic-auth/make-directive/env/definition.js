@@ -1,8 +1,8 @@
 import { DirectiveLocation, GraphQLNonNull, GraphQLString } from 'graphql';
 import { wrappers } from '../constants';
 
-export const ENVIRONMENT_NAME = 'env';
-export const ENVIRONMENT_DIRECTIVE = {
+export const definition = {
+  name: 'env',
   customParams: [
     {
       name: 'this',

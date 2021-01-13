@@ -1,4 +1,3 @@
-import { AUTHORIZATION_NAME } from '../make-directive';
 import { codifyDirectiveInstance } from './codify-directive-instance';
 import {
   compose,
@@ -15,7 +14,7 @@ import {
   zip
 } from 'ramda';
 import { decodifyDirectiveInstance } from './decodify-directive-instance';
-import { directives } from '../make-directive';
+import { directiveDefinitions } from '../make-directive';
 import { getDirectiveAST } from './get-directive-ast';
 import { getDirectiveInputs } from './get-directive-inputs';
 import { match, valueNames } from './constants';
@@ -49,12 +48,12 @@ export const mungeTypeDefs = config => {
       const matchValue = calledCustomDirectiveInstances[index + 2].value;
       const directiveValue = value.slice(value.lastIndexOf('@') + 1);
       if (
-        customDirectives[directiveValue].instances.filter(
-          ({ name }) => name === AUTHORIZATION_NAME
-        ).length === 0
+        !customDirectives[directiveValue].instances.some(
+          ({ name }) => directiveDefinitions[name].customParams?.length > 0
+        )
       ) {
         throw new Error(
-          `Cannot call @${directiveValue} because it does not implement the @${AUTHORIZATION_NAME} directive`
+          `Cannot call @${directiveValue}, none of the directiveDefinitions it implements have custom parameters`
         );
       }
       return {
@@ -65,11 +64,11 @@ export const mungeTypeDefs = config => {
           unnest(
             customDirectives[directiveValue].instances.map(({ name }) =>
               zip(
-                directives[name].customParams.map(({ name }) => name),
+                directiveDefinitions[name].customParams.map(({ name }) => name),
                 getDirectiveInputs(
                   matchValue,
                   name,
-                  directives[name].customParams,
+                  directiveDefinitions[name].customParams,
                   config
                 ).map(({ value }) => value)
               )
@@ -118,7 +117,7 @@ export const mungeTypeDefs = config => {
         decodifyDirectiveInstance(code, customDirectives)
       ])
     ),
-    ...directives
+    ...directiveDefinitions
   };
 
   return {
@@ -131,7 +130,7 @@ export const mungeTypeDefs = config => {
               ? `(${params
                   .map(({ name, type }) => {
                     const { getTypeDef, getTypeName } =
-                      directives[directiveName]?.params?.find(
+                      directiveDefinitions[directiveName]?.params?.find(
                         param => param.name === name
                       )?.type || {};
                     if (getTypeDef && getTypeName) {

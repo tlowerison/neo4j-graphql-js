@@ -39,8 +39,13 @@ const neo4jGraphQLVersion = require('../package.json').version;
 
 const debug = Debug('neo4j-graphql-js');
 
-export async function neo4jgraphql(object, params, context, resolveInfo) {
-  const debugFlag = true;
+export async function neo4jgraphql(
+  object,
+  params,
+  context,
+  resolveInfo,
+  debugFlag
+) {
   if (isFederatedOperation({ resolveInfo })) {
     return await executeFederatedOperation({
       object,

@@ -5,7 +5,7 @@ import {
   nest,
   valueNames
 } from './constants';
-import { directives } from '../make-directive';
+import { directiveDefinitions } from '../make-directive';
 import { fromPairs, last, slice, zip } from 'ramda';
 import { getDirectiveInputs } from './get-directive-inputs';
 import { matchRecursive } from 'xregexp';
@@ -58,11 +58,13 @@ const mungeRecursiveMatches = recursiveMatches =>
               name: directiveValue,
               args: fromPairs(
                 zip(
-                  directives[directiveValue].params.map(({ name }) => name),
+                  directiveDefinitions[directiveValue].params.map(
+                    ({ name }) => name
+                  ),
                   getDirectiveInputs(
                     matchValue,
                     directiveValue,
-                    directives[directiveValue].params
+                    directiveDefinitions[directiveValue].params
                   ).map(({ value }) => value)
                 )
               )
@@ -73,6 +75,11 @@ const mungeRecursiveMatches = recursiveMatches =>
     }
     const directiveValue = betweenValue.slice(1);
     const prev = last(acc);
+    if (betweenValue.indexOf(':=') >= 0) {
+      throw new Error(
+        `Cannot use unknown directive ${betweenValue.split(':=')[1].trim()}`
+      );
+    }
     return [
       ...slice(0, -1, acc),
       {
@@ -83,11 +90,13 @@ const mungeRecursiveMatches = recursiveMatches =>
             name: betweenValue.slice(1),
             args: fromPairs(
               zip(
-                directives[directiveValue].params.map(({ name }) => name),
+                directiveDefinitions[directiveValue].params.map(
+                  ({ name }) => name
+                ),
                 getDirectiveInputs(
                   matchValue,
                   directiveValue,
-                  directives[directiveValue].params
+                  directiveDefinitions[directiveValue].params
                 ).map(({ value }) => value)
               )
             )

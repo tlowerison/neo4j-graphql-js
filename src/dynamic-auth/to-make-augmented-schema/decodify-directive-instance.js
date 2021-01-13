@@ -1,5 +1,5 @@
 import { alphanumeric } from './constants';
-import { directives } from '../make-directive';
+import { directiveDefinitions } from '../make-directive';
 import { intersection, map } from 'ramda';
 
 export const decodifyDirectiveInstance = (
@@ -47,7 +47,7 @@ export const decodifyDirectiveInstance = (
       )
     })),
     locations: customDirectives[name].instances
-      .map(({ name }) => directives[name].locations)
+      .map(({ name }) => directiveDefinitions[name].locations)
       .reduce((acc, locations) => intersection(acc, locations)),
     params: []
   };

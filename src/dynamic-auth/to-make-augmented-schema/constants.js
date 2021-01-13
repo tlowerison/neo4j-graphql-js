@@ -1,6 +1,6 @@
 import { DirectiveLocation, GraphQLList, GraphQLString } from 'graphql';
 import { addIndex, compose, groupBy, keys, values } from 'ramda';
-import { directives } from '../make-directive';
+import { directiveDefinitions } from '../make-directive';
 
 export const valueNames = ['between', 'left', 'match', 'right'];
 export const nest = compose(
@@ -21,7 +21,7 @@ export const alpha = '([A-Z]|[a-z]|_)';
 export const alphanumeric = '([A-Z]|[a-z]|[0-9]|_)';
 export const name = `${alpha}${alphanumeric}+`;
 export const space = '( |\t|\n)*';
-export const directive = `(${keys(directives).join('|')})`;
+export const directive = `(${keys(directiveDefinitions).join('|')})`;
 export const definition = `${space}@${name}${space}:=${space}@${directive}${space}`;
 export const isDefinition = text => text.match(new RegExp(definition, 'g'));
 
