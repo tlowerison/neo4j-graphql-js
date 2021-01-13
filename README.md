@@ -8,6 +8,10 @@ This fork of [neo4j-graphql-js](https://github.com/neo4j-graphql/neo4j-graphql-j
 yarn add @tlowerison/neo4j-graphql-js
 ```
 
+## Full Example
+
+A full example project that uses `@tlowerison/neo4j-graphql-js` exists in [GRAND Stack Kit](https://github.com/tlowerison/grandstack-kit)'s api directory.
+
 ## Directives
 
 #### @shield
@@ -509,7 +513,3 @@ export declare class AuthorizationError extends Error {
   constructor(arg0?: { message: string });
 }
 ```
-
-## Full Example
-
-A full working example is available at [GRAND Stack Kit](https://github.com/tlowerison/grandstack-kit) in the [api](https://github.com/tlowerison/grandstack-kit/tree/main/api) directory.
