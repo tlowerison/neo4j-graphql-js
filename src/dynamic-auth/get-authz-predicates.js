@@ -66,7 +66,6 @@ const getRawAuthzPredicates = ({
   const authzFieldPredicate = getAuthzFieldPredicate({
     authorizations,
     fieldName,
-    nodeVariableName,
     schemaType,
     typeNames,
     variableName
@@ -90,7 +89,6 @@ const getRawAuthzPredicates = ({
 const getAuthzFieldPredicate = ({
   authorizations,
   fieldName,
-  nodeVariableName,
   schemaType,
   typeNames,
   variableName
@@ -116,7 +114,7 @@ const getAuthzFieldPredicate = ({
     filter:
       filterFieldAuthorizations.length > 0
         ? filterFieldAuthorizations
-            .map(({ filter }) => filter(nodeVariableName))
+            .map(({ filter }) => filter(`\`${variableName}_${fieldName}\``))
             .join(' AND ')
         : null,
     shield:

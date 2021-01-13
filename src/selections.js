@@ -536,7 +536,7 @@ const translateScalarTypeField = ({
   context,
   innerSchemaType
 }) => {
-  const { shield } = getAuthzPredicates({
+  const { filter, shield } = getAuthzPredicates({
     context,
     cypherParams,
     fieldName,
@@ -597,9 +597,11 @@ const translateScalarTypeField = ({
     }
     // graphql scalar type, no custom cypher statement
     return {
-      initial: `${initial} ${fieldName}: ${shield(
-        `${variableName}.${fieldName}`
-      )} ${commaIfTail}`,
+      initial: `${initial} ${fieldName}: ${
+        filter ? `[\`${variableName}_${fieldName}\` IN ` : ''
+      }${shield(`${variableName}.${fieldName}`)}${
+        filter ? ` WHERE ${filter} | \`${variableName}_${fieldName}\`]` : ''
+      }${commaIfTail}`,
       ...tailParams
     };
   }
