@@ -12,6 +12,11 @@ export const toMakeAugmentedSchema = (
   if (!options?.config?.auth) {
     return makeBasicAugmentedSchema(options);
   }
+  if (options.config.auth.typeDefs) {
+    options.config.auth.typeDefs = options.config.auth.typeDefs
+      .split(new RegExp(' *#.*\n?', 'g'))
+      .join('');
+  }
   const { authDirectives, typeDefs } = mungeTypeDefs(options);
   const Query = { ...(options.resolvers?.Query || {}) };
   const Mutation = { ...(options.resolvers?.Mutation || {}) };
