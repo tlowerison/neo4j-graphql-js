@@ -20,6 +20,7 @@ export const isValidNesting = ([between, left, match, right]) =>
 export const alpha = '([A-Z]|[a-z]|_)';
 export const alphanumeric = '([A-Z]|[a-z]|[0-9]|_)';
 export const name = `${alpha}${alphanumeric}+`;
+export const varName = `(\`[^\`]+\`|${alpha}${alphanumeric}*)`;
 export const space = '( |\t|\n)*';
 export const directive = `(${keys(directiveDefinitions).join('|')})`;
 export const definition = `${space}@${name}${space}:=${space}@${directive}${space}`;

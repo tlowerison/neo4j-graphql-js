@@ -1,4 +1,4 @@
-import { alpha, alphanumeric } from './to-make-augmented-schema';
+import { varName } from './to-make-augmented-schema';
 
 export const getEnv = ({ context, resolveInfo }) => {
   const typeName = resolveInfo.parentType.name;
@@ -8,7 +8,13 @@ export const getEnv = ({ context, resolveInfo }) => {
     context.environments[typeName][resolveInfo.fieldName]
       ? `${context.environments[typeName][resolveInfo.fieldName].join(' ')} `
       : '';
-  const varNames =
-    env.match(new RegExp(`(?<=\\()${alpha}${alphanumeric}+(?=:)`, 'g')) || [];
-  return { env, varNames: ['me', ...varNames] };
+  const varNames = [
+    ...(env.match(new RegExp(`(?<=\\()${varName}(?=:)`, 'g')) || []),
+    ...(
+      env.match(
+        new RegExp(`(?<=( |\t|\n)[Aa][Ss])( |\t|\n)+${varName}`, 'g')
+      ) || []
+    ).map(e => e.trim())
+  ];
+  return { env, varNames };
 };
