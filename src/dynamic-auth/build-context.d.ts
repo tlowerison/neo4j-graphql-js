@@ -3,7 +3,7 @@ import { Driver, QueryResult, Session, Transaction } from 'neo4j-driver';
 type Credentials = { [index: string]: any; roles: string[]; scopes: string[] };
 
 export interface ContextConfig {
-  credentials: {
+  credentials?: {
     /**
      * A function for constructing the cypherParams object from an incoming JWT object
      * - defaults to (jwt) => jwt
@@ -69,30 +69,4 @@ export interface Context {
   session: any;
 }
 
-export declare function buildContext(
-  driver: Driver,
-  config: {
-    credentials: {
-      /**
-       * A function for constructing the cypherParams object from an incoming JWT object
-       * - defaults to (jwt) => jwt
-       */
-      extract?: (jwt: object) => Credentials
-      /**
-       * The set of keys expected to be included in the JWT which will identify the current user.
-       * - defaults to ['_id']
-       * - if '_id' is included it will perform use the special cypher id matching pattern
-       *   - e.g. `MATCH (me) WHERE id(me) = $cypherParams._credentials._id ...`
-       * - all other keys will be matchedin the standard cypher object pattern
-       *   - e.g. for keys: ['uuid'], `MATCH (me { uuid: $cypherParams._credentials.uuid }) ...`
-       */
-      keys?: string[];
-    };
-    /**
-     * The node label(s) for users in your database.
-     * - defaults to 'User'
-     * - e.g. for userType: 'Uuser', matches will look like `MATCH (me:Uuser) ...`
-     */
-    userType?: string;
-  },
-): <K extends any[]>(...args: K) => Context;
+export declare function buildContext(driver: Driver, config?: ContextConfig): <K extends any[]>(...args: K) => Context;
