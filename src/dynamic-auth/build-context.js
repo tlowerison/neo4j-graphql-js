@@ -42,12 +42,9 @@ export const buildContext = (driver, config) => {
     }`;
   }
   return async ({ req }) => {
-    let credentials =
-      matchMe !== nullMatchMe &&
-      extractCredentials(req.session || verifyAndDecodeToken(req));
-    if (typeof credentials !== 'object') {
-      credentials = null;
-    }
+    const credentials = extractCredentials(
+      req.session || verifyAndDecodeToken(req)
+    );
     let neo4jSession;
     let tx;
     const getNeo4jSession = () =>
@@ -81,7 +78,7 @@ export const buildContext = (driver, config) => {
         );
       },
       matchMe:
-        credentials &&
+        matchMe !== nullMatchMe &&
         credentialKeys.every(credentialKey => has(credentialKey, credentials))
           ? matchMe
           : nullMatchMe,
