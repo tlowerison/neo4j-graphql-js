@@ -12,7 +12,8 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
     const parentName = details.objectType.name;
     const { name: fieldName } = field;
     const { typeName } = typeIdentifiers(field.type);
-    const error = (args.error || this.args.error).trim();
+    const errorCode = (args.errorCode || this.args.errorCode).trim();
+    const errorMessage = (args.errorMessage || this.args.errorMessage).trim();
     const expression = (args.expression || this.args.expression).trim();
     const isDefaultExpression = getIsDefaultExpression(expression);
 
@@ -30,7 +31,8 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
         authorizations[typeName].fields[fieldName][parentName] = [];
       }
       authorizations[typeName].fields[fieldName][parentName].push({
-        error,
+        errorCode,
+        errorMessage,
         name,
         shield: toAuthorization(expression, 'this')
       });
@@ -38,12 +40,14 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
   },
   visitInterface(interfaceType) {
     const { name: typeName } = interfaceType;
-    const error = (args.error || this.args.error).trim();
+    const errorCode = (args.errorCode || this.args.errorCode).trim();
+    const errorMessage = (args.errorMessage || this.args.errorMessage).trim();
     const expression = (args.expression || this.args.expression).trim();
     if (!getIsDefaultExpression(expression)) {
       saveNodeAuthorization({
         authorizations,
-        error,
+        errorCode,
+        errorMessage,
         name,
         expression,
         typeName
@@ -52,12 +56,14 @@ export const makeDirective = (name, args, { authorizations = {} }) => ({
   },
   visitObject(objectType) {
     const { name: typeName } = objectType;
-    const error = (args.error || this.args.error).trim();
+    const errorCode = (args.errorCode || this.args.errorCode).trim();
+    const errorMessage = (args.errorMessage || this.args.errorMessage).trim();
     const expression = (args.expression || this.args.expression).trim();
     if (!getIsDefaultExpression(expression)) {
       saveNodeAuthorization({
         authorizations,
-        error,
+        errorCode,
+        errorMessage,
         name,
         expression,
         typeName

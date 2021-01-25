@@ -10,7 +10,8 @@ export const getIsDefaultExpression = expression =>
 
 export const saveNodeAuthorization = ({
   authorizations,
-  error,
+  errorCode,
+  errorMessage,
   name,
   expression,
   typeName
@@ -22,7 +23,8 @@ export const saveNodeAuthorization = ({
     };
   }
   authorizations[typeName].node.push({
-    error,
+    errorCode,
+    errorMessage,
     name,
     shield: toAuthorization(expression, 'this')
   });

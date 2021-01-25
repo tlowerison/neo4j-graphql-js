@@ -17,7 +17,7 @@ A full example project that uses `@tlowerison/neo4j-graphql-js` exists in [GRAND
 ### @shield
 
 ```graphql
-@shield(expression: String!, error: String) on FIELD_DEFINITION | OBJECT | INTERFACE
+@shield(expression: String!, errorCode: String, errorMessage: String) on FIELD_DEFINITION | OBJECT | INTERFACE
 ```
 
 Can limit access to a specific type's field or to all object type fields that return a specific type.
@@ -25,8 +25,10 @@ Can limit access to a specific type's field or to all object type fields that re
 Arguments:
 
 - `expression`: a valid Cypher expression
-- `error`: if present and `expression` is falsey, the resolver will throw an ApolloError whose message is a `;` delimited string containing the `error` values of all `expression`s that are falsey for this operation. If not present and `expression` is falsey, the resolver will silently return _NULL_ and not execute the operation.
-  - NOTE: `error` is used as a Cypher string, not an expression
+- `errorCode`: if present and `expression` is falsey, the resolver will throw an ApolloError whose `extensions.code` field is a `;` delimited string containing the `errorCode` values of all `expression`s that are falsey for this operation. If not present and `expression` is falsey, the resolver will silently return _NULL_ and not execute the operation.
+  - NOTE: `errorCode` is used as a Cypher string, not an expression
+- `errorMessage`: any ApolloError thrown due to dynamic auth errors will have an error message containing the failing conditions' `errorMessage`s delimited by `;`
+  - NOTE: `errorCode` is used as a Cypher expression, not a string
 
 Scoped Cypher Variables:
 
@@ -66,6 +68,61 @@ type User {
   username: String
   friends: [User] @relation(name: "KNOWS", direction: "OUT")
   birthday: String @shield(expression: "(me)-[:KNOWS]-(this)")
+}
+```
+
+###### Example
+
+An example of using shield errors look like this
+
+```graphql
+type User {
+  uuid: ID! @id
+  username: String
+  friends: [User] @relation(name: "KNOWS", direction: "OUT")
+  birthday: String
+    @shield(
+      expression: "(me)-[:KNOWS]-(this)"
+      errorCode: "UNAUTHORIZED"
+      errorMessage: "'You can only view your friends' birthdays'"
+    )
+}
+```
+
+Then a query without proper credentials would give a result like this
+
+```json
+{
+  "errors": [
+    {
+      "message": "You can only view your friends' birthdays",
+      "locations": [
+        {
+          "line": 2,
+          "column": 3
+        }
+      ],
+      "path": ["User", "birthday"],
+      "extensions": {
+        "code": "UNAUTHORIZED",
+        "exception": {
+          "stacktrace": [
+            "Error: UNAUTHORIZED",
+            "    at throwDynamicAuthError (path/to/project/node_modules/@tlowerison/neo4j-graphql-js/dist/dynamic-auth/throw-dynamic-auth-error.js:18:9)",
+            "    at extractQueryResult (path/to/project/node_modules/@tlowerison/neo4j-graphql-js/dist/utils.js:189:46)",
+            "    at _callee2$ (path/to/project/node_modules/@tlowerison/neo4j-graphql-js/dist/index.js:244:89)",
+            "    at tryCatch (path/to/project/node_modules/regenerator-runtime/runtime.js:63:40)",
+            "    at Generator.invoke [as _invoke] (path/to/project/node_modules/regenerator-runtime/runtime.js:293:22)",
+            "    at Generator.next (path/to/project/node_modules/regenerator-runtime/runtime.js:118:21)",
+            "    at asyncGeneratorStep (path/to/project/node_modules/@babel/runtime-corejs3/helpers/asyncToGenerator.js:5:24)",
+            "    at _next (path/to/project/node_modules/@babel/runtime-corejs3/helpers/asyncToGenerator.js:27:9)",
+            "    at process._tickCallback (internal/process/next_tick.js:68:7)"
+          ]
+        }
+      }
+    }
+  ],
+  "data": null
 }
 ```
 

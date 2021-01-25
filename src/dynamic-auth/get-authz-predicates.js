@@ -27,7 +27,7 @@ const getCustomOperationShield = (shield, variableName, isMutation) => (
 ) =>
   `\nWITH${
     varNames.length > 0 ? ` ${varNames.join(', ')},` : ''
-  } [x IN ${shield} WHERE NOT x.shield | x { .name, .error }] AS _errors\nCALL apoc${
+  } [x IN ${shield} WHERE NOT x.shield | x { .code, .message }] AS _errors\nCALL apoc${
     isMutation ? '.do' : ''
   }.when(size(_errors) = 0, "${replaceQuotes(
     value
@@ -121,10 +121,10 @@ const getAuthzFieldPredicate = ({
       shieldFieldAuthorizations.length > 0
         ? `[${shieldFieldAuthorizations
             .map(
-              ({ error, name, shield }) =>
+              ({ errorCode, errorMessage, name, shield }) =>
                 `{shield: ${shield(
                   variableName
-                )}, name: '${name}', error: '${error}'}`
+                )}, code: '${errorCode}', message: ${errorMessage}}`
             )
             .join(', ')}]`
         : null

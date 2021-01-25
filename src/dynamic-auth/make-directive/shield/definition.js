@@ -33,9 +33,19 @@ export const definition = {
       wrappers: wrappers.string
     },
     {
-      name: 'error',
+      name: 'errorCode',
       type: {
-        defaultValue: 'Unauthorized',
+        defaultValue: 'UNAUTHORIZED',
+        getType: () => GraphQLString,
+        getTypeDef: () => 'String',
+        getTypeName: () => 'String'
+      },
+      wrappers: wrappers.string
+    },
+    {
+      name: 'errorMessage',
+      type: {
+        defaultValue: "'Unauthorized'",
         getType: () => GraphQLString,
         getTypeDef: () => 'String',
         getTypeName: () => 'String'

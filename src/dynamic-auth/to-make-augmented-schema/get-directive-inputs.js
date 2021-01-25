@@ -76,7 +76,10 @@ export const getDirectiveInputs = (
     }
     if (index === -1 && required) {
       throw new Error(
-        `Directive ${directiveValue} expected "${name}" argument but didn't receive one.`
+        `Directive @${directiveValue} either received unknown arguments or is missing required arguments.\n\n${`@${directiveValue}(\n${matchValue}\n)`
+          .split('\n')
+          .map(line => `  ${line}`)
+          .join('\n')}\n`
       );
     } else if (index === -1 && !required) {
       return { name, value: type.defaultValue };
